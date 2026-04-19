@@ -1,0 +1,22 @@
+{
+  "name": "presupuesto-familiar-app",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @presupuesto/api && npm run build -w @presupuesto/web",
+    "dev": "npm run dev -w @presupuesto/api",
+    "dev:web": "npm run dev -w @presupuesto/web",
+    "test": "npm run test -w @presupuesto/api && npm run test -w @presupuesto/web",
+    "db:migrate": "npm run db:migrate -w @presupuesto/api",
+    "db:generate": "npm run db:generate -w @presupuesto/api",
+    "local:up": "./scripts/local-up.sh",
+    "local:down": "./scripts/local-down.sh",
+    "local:logs": "./scripts/local-logs.sh",
+    "sonar:up": "./scripts/sonar-up.sh",
+    "sonar:down": "./scripts/sonar-down.sh",
+    "sonar:scan": "./scripts/sonar-scan.sh",
+    "quality:validate": "./scripts/quality-validate.sh"
+  }
+}

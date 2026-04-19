@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BudgetKind {
+  INCOME
+  EXPENSE
+}
+
+enum BudgetNature {
+  FIXED
+  VARIABLE
+}
+
+model BudgetCategory {
+  id           String               @id @default(cuid())
+  name         String               @unique
+  description  String?
+  kind         BudgetKind
+  nature       BudgetNature
+  active       Boolean              @default(true)
+  annualBudget AnnualBudget[]
+  consumptions MonthlyConsumption[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model AnnualBudget {
+  id            String         @id @default(cuid())
+  year          Int
+  plannedAmount Decimal        @db.Decimal(12, 2)
+  categoryId    String
+  category      BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([year, categoryId])
+  @@index([year])
+}
+
+model MonthlyConsumption {
+  id           String         @id @default(cuid())
+  year         Int
+  month        Int
+  actualAmount Decimal        @db.Decimal(12, 2)
+  categoryId   String
+  category     BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([year, month, categoryId])
+  @@index([year, month])
+}
