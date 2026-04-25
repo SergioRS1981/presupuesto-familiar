@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: presupuesto-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-presupuesto_familiar}
@@ -25,13 +24,13 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: presupuesto-api
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 3001
       API_PREFIX: /api
       CORS_ORIGIN: ${WEB_PUBLIC_URL:-http://localhost:3000}
@@ -51,7 +50,6 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3001/api}
-    container_name: presupuesto-web
     restart: unless-stopped
     depends_on:
       api:
@@ -66,7 +64,6 @@ services:
 
   sonarqube-db:
     image: postgres:16-alpine
-    container_name: presupuesto-sonarqube-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${SONARQUBE_DB:-sonarqube}
@@ -88,7 +85,6 @@ services:
 
   sonarqube:
     image: sonarqube:lts-community
-    container_name: presupuesto-sonarqube
     restart: unless-stopped
     depends_on:
       sonarqube-db:

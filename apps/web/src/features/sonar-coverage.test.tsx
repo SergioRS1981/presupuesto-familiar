@@ -19,9 +19,23 @@ const { apiMock } = vi.hoisted(() => ({
   }
 }));
 
+const { excelImportMock } = vi.hoisted(() => ({
+  excelImportMock: {
+    downloadCategoryTemplateWorkbook: vi.fn(),
+    downloadBudgetTemplateWorkbook: vi.fn(),
+    downloadConsumptionTemplateWorkbook: vi.fn(),
+    readCategoryImportFile: vi.fn(),
+    readBudgetImportFile: vi.fn(),
+    readConsumptionImportFile: vi.fn(),
+    getCategoryLookupKey: vi.fn((value: string) => value.trim().toLowerCase())
+  }
+}));
+
 vi.mock("../api/client", () => ({
   api: apiMock
 }));
+
+vi.mock("./imports/excel-import", () => excelImportMock);
 
 vi.mock("primereact/button", () => ({
   Button: ({ label, icon, onClick, disabled, children }: any) => (
@@ -190,6 +204,33 @@ describe("Cobertura Sonar", () => {
     apiMock.deleteBudget.mockResolvedValue(undefined);
     apiMock.saveConsumption.mockResolvedValue(januaryConsumption);
     apiMock.deleteConsumption.mockResolvedValue(undefined);
+    excelImportMock.downloadCategoryTemplateWorkbook.mockResolvedValue(undefined);
+    excelImportMock.downloadBudgetTemplateWorkbook.mockResolvedValue(undefined);
+    excelImportMock.downloadConsumptionTemplateWorkbook.mockResolvedValue(undefined);
+    excelImportMock.readCategoryImportFile.mockResolvedValue([
+      {
+        name: "Seguro",
+        description: "Hogar",
+        kind: "EXPENSE",
+        nature: "FIXED",
+        active: true
+      }
+    ]);
+    excelImportMock.readBudgetImportFile.mockResolvedValue([
+      {
+        year: 2026,
+        categoryName: "Hipoteca",
+        plannedAmount: 9000
+      }
+    ]);
+    excelImportMock.readConsumptionImportFile.mockResolvedValue([
+      {
+        year: 2026,
+        month: 2,
+        categoryName: "Hipoteca",
+        actualAmount: 150
+      }
+    ]);
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
@@ -235,6 +276,22 @@ describe("Cobertura Sonar", () => {
         plannedAmount: 8000
       })
     );
+
+    await user.upload(screen.getByLabelText("Importar Excel partidas fichero"), new File(["ok"], "partidas.xlsx"));
+    await waitFor(() => expect(apiMock.createCategory).toHaveBeenCalledWith(expect.objectContaining({ name: "Seguro" })));
+
+    await user.upload(
+      screen.getByLabelText("Importar Excel presupuestos fichero"),
+      new File(["ok"], "presupuestos.xlsx")
+    );
+    await waitFor(() =>
+      expect(apiMock.saveBudget).toHaveBeenCalledWith({
+        year: 2026,
+        categoryId: "mortgage",
+        plannedAmount: 9000
+      })
+    );
+
     expect(onReload).toHaveBeenCalled();
   });
 
@@ -272,11 +329,24 @@ describe("Cobertura Sonar", () => {
         actualAmount: 150
       })
     );
+
+    await user.upload(
+      screen.getByLabelText("Importar Excel consumos fichero"),
+      new File(["ok"], "consumos.xlsx")
+    );
+    await waitFor(() =>
+      expect(apiMock.saveConsumption).toHaveBeenCalledWith({
+        year: 2026,
+        categoryId: "mortgage",
+        month: 2,
+        actualAmount: 150
+      })
+    );
     expect(onReload).toHaveBeenCalled();
   });
 
   it("muestra el estado vacio del informe cuando no hay datos", () => {
-    render(<ReportsDashboard year={2026} report={null} />);
+    render(<ReportsDashboard year={2026} report={null} budgets={[]} consumptions={[]} availableYears={[2026]} />);
 
     expect(screen.getByText("Todavia no hay datos para generar informes del ano seleccionado.")).toBeInTheDocument();
   });

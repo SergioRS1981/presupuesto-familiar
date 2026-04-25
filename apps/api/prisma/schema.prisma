@@ -30,6 +30,12 @@ model BudgetCategory {
   updatedAt    DateTime             @updatedAt
 }
 
+model ConfiguredYear {
+  year      Int      @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model AnnualBudget {
   id            String         @id @default(cuid())
   year          Int

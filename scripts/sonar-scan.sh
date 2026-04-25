@@ -3,22 +3,36 @@
 set -eu
 
 ROOT_DIR="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
-ENV_FILE="$ROOT_DIR/.env.local"
+TARGET_ENV="${1:-development}"
+ENV_FILE="$ROOT_DIR/.env.${TARGET_ENV}.local"
+EXAMPLE_FILE="$ROOT_DIR/.env.${TARGET_ENV}.example"
 TOKEN_FILE="$ROOT_DIR/.sonar.token"
 
-if [ ! -f "$ENV_FILE" ]; then
-  cp "$ROOT_DIR/.env.local.example" "$ENV_FILE"
+if [ ! -f "$EXAMPLE_FILE" ]; then
+  echo "No existe configuracion de ejemplo para el entorno $TARGET_ENV."
+  exit 1
 fi
 
-SONAR_PORT="$(awk -F= '/^SONARQUBE_PORT=/{print $2}' "$ENV_FILE" 2>/dev/null || true)"
-SONAR_ADMIN_PASSWORD="$(awk -F= '/^SONARQUBE_ADMIN_PASSWORD=/{print $2}' "$ENV_FILE" 2>/dev/null || true)"
-SONAR_TOKEN_NAME="$(awk -F= '/^SONARQUBE_TOKEN_NAME=/{print $2}' "$ENV_FILE" 2>/dev/null || true)"
+if [ ! -f "$ENV_FILE" ]; then
+  cp "$EXAMPLE_FILE" "$ENV_FILE"
+fi
+
+read_env_value() {
+  awk -F= -v key="$1" '$1 == key { print substr($0, index($0, "=") + 1) }' "$ENV_FILE" 2>/dev/null || true
+}
+
+COMPOSE_PROJECT_NAME_VALUE="$(read_env_value COMPOSE_PROJECT_NAME)"
+SONAR_PORT="$(read_env_value SONARQUBE_PORT)"
+SONAR_ADMIN_PASSWORD="$(read_env_value SONARQUBE_ADMIN_PASSWORD)"
+SONAR_TOKEN_NAME="$(read_env_value SONARQUBE_TOKEN_NAME)"
+
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME_VALUE:-presupuesto-${TARGET_ENV}}"
 
 SONAR_PORT="${SONAR_PORT:-9000}"
 SONAR_ADMIN_PASSWORD="${SONAR_ADMIN_PASSWORD:-SonarLocal123!}"
 SONAR_TOKEN_NAME="${SONAR_TOKEN_NAME:-presupuesto-local-scan}"
 
-"$ROOT_DIR/scripts/sonar-up.sh"
+"$ROOT_DIR/scripts/sonar-up.sh" "$TARGET_ENV"
 "$ROOT_DIR/scripts/quality-validate.sh"
 
 SONAR_URL="http://localhost:${SONAR_PORT}"
@@ -76,7 +90,7 @@ fi
 
 echo "Ejecutando analisis SonarQube..."
 docker run --rm \
-  --network app_default \
+  --network "${COMPOSE_PROJECT_NAME}_default" \
   -e SONAR_HOST_URL="http://sonarqube:9000" \
   -e SONAR_TOKEN="$SONAR_TOKEN" \
   -v "$ROOT_DIR:/usr/src" \

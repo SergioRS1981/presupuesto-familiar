@@ -37,6 +37,7 @@ Dar al usuario una herramienta sencilla para:
 El alcance funcional entregado hoy cubre:
 
 - gestion de partidas presupuestarias
+- alta de anos pasados
 - configuracion del presupuesto anual
 - registro de consumos mensuales reales
 - informes comparativos anuales
@@ -59,4 +60,3 @@ Todavia no forman parte del producto actual:
 - control temprano de desviaciones
 - mayor disciplina presupuestaria
 - lenguaje comun para hablar de dinero en casa
-

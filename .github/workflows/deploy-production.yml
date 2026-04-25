@@ -1,0 +1,70 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag de imagen a desplegar (usa main o un SHA concreto)"
+        required: true
+        default: "main"
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive image names
+        id: image-vars
+        run: |
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          repo="$(printf '%s' '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')"
+          echo "api_image=ghcr.io/${owner}/${repo}-api:${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          echo "web_image=ghcr.io/${owner}/${repo}-web:${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Copy deployment assets to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
+          source: docker-compose.deploy.yml,scripts/deploy/vps-deploy.sh,scripts/deploy/vps-backup.sh
+          target: ${{ secrets.VPS_APP_PATH }}
+          overwrite: true
+
+      - name: Deploy selected release
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          API_IMAGE: ${{ steps.image-vars.outputs.api_image }}
+          WEB_IMAGE: ${{ steps.image-vars.outputs.web_image }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
+          envs: API_IMAGE,WEB_IMAGE,REGISTRY_USERNAME,REGISTRY_PASSWORD,VPS_APP_PATH
+          script: |
+            set -eu
+            mkdir -p "$VPS_APP_PATH"
+            cat > "$VPS_APP_PATH/.env.production" <<'EOF'
+            ${{ secrets.PROD_ENV_FILE }}
+            EOF
+            printf '\nAPI_IMAGE=%s\nWEB_IMAGE=%s\n' "$API_IMAGE" "$WEB_IMAGE" >> "$VPS_APP_PATH/.env.production"
+            chmod +x "$VPS_APP_PATH/scripts/deploy/vps-deploy.sh" "$VPS_APP_PATH/scripts/deploy/vps-backup.sh"
+            cd "$VPS_APP_PATH"
+            REGISTRY=ghcr.io sh ./scripts/deploy/vps-deploy.sh ./.env.production

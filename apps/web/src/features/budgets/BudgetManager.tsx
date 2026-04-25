@@ -12,6 +12,14 @@ import { Tag } from "primereact/tag";
 import { api } from "../../api/client";
 import { Budget, Category } from "../../api/types";
 import { formatCurrency, formatKind, formatNature } from "../../utils/format";
+import { ExcelTransferActions } from "../imports/ExcelTransferActions";
+import {
+  downloadBudgetTemplateWorkbook,
+  downloadCategoryTemplateWorkbook,
+  getCategoryLookupKey,
+  readBudgetImportFile,
+  readCategoryImportFile
+} from "../imports/excel-import";
 
 type BudgetManagerProps = {
   year: number;
@@ -40,6 +48,11 @@ type CategoryForm = {
   kind: "INCOME" | "EXPENSE";
   nature: "FIXED" | "VARIABLE";
   active: boolean;
+};
+
+type Feedback = {
+  severity: "success" | "error";
+  text: string;
 };
 
 const kindOptions = [
@@ -92,6 +105,9 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
   const [categoryDialogVisible, setCategoryDialogVisible] = useState(false);
   const [budgetDialogVisible, setBudgetDialogVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importingCategories, setImportingCategories] = useState(false);
+  const [importingBudgets, setImportingBudgets] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [plannedAmount, setPlannedAmount] = useState<number>(0);
@@ -120,6 +136,7 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
   };
 
   const saveCategory = async () => {
+    setFeedback(null);
     setSaving(true);
 
     try {
@@ -141,6 +158,7 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
       return;
     }
 
+    setFeedback(null);
     setSaving(true);
 
     try {
@@ -162,6 +180,7 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
       return;
     }
 
+    setFeedback(null);
     await api.deleteCategory(category.id);
     await onReload();
   };
@@ -171,8 +190,94 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
       return;
     }
 
+    setFeedback(null);
     await api.deleteBudget(budgetId);
     await onReload();
+  };
+
+  const handleDownloadCategoryTemplate = async () => {
+    await downloadCategoryTemplateWorkbook();
+  };
+
+  const handleDownloadBudgetTemplate = async () => {
+    await downloadBudgetTemplateWorkbook({ year, categories });
+  };
+
+  const handleCategoryImport = async (file: File) => {
+    setImportingCategories(true);
+    setFeedback(null);
+
+    try {
+      const rows = await readCategoryImportFile(file);
+      const categoryMap = new Map(categories.map((category) => [getCategoryLookupKey(category.name), category]));
+      let created = 0;
+      let updated = 0;
+
+      for (const row of rows) {
+        const rowKey = getCategoryLookupKey(row.name);
+        const existingCategory = categoryMap.get(rowKey);
+
+        if (existingCategory) {
+          await api.updateCategory(existingCategory.id, row);
+          updated += 1;
+          continue;
+        }
+
+        const createdCategory = await api.createCategory(row);
+        categoryMap.set(rowKey, createdCategory);
+        created += 1;
+      }
+
+      await onReload();
+      setFeedback({
+        severity: "success",
+        text: `Importacion completada. Partidas creadas: ${created}. Partidas actualizadas: ${updated}.`
+      });
+    } catch (error) {
+      setFeedback({
+        severity: "error",
+        text: error instanceof Error ? error.message : "No se pudo importar el Excel de partidas."
+      });
+    } finally {
+      setImportingCategories(false);
+    }
+  };
+
+  const handleBudgetImport = async (file: File) => {
+    setImportingBudgets(true);
+    setFeedback(null);
+
+    try {
+      const rows = await readBudgetImportFile(file, year);
+      const categoryMap = new Map(categories.map((category) => [getCategoryLookupKey(category.name), category]));
+
+      for (const row of rows) {
+        const category = categoryMap.get(getCategoryLookupKey(row.categoryName));
+
+        if (!category) {
+          throw new Error(`La partida "${row.categoryName}" no existe. Importa o crea antes esa partida.`);
+        }
+
+        await api.saveBudget({
+          year: row.year,
+          categoryId: category.id,
+          plannedAmount: row.plannedAmount
+        });
+      }
+
+      await onReload();
+      setFeedback({
+        severity: "success",
+        text: `Importacion completada. Presupuestos actualizados: ${rows.length}.`
+      });
+    } catch (error) {
+      setFeedback({
+        severity: "error",
+        text: error instanceof Error ? error.message : "No se pudo importar el Excel de presupuestos."
+      });
+    } finally {
+      setImportingBudgets(false);
+    }
   };
 
   const categoryRows = useMemo<CategoryRow[]>(
@@ -210,6 +315,12 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
 
   return (
     <div className="grid">
+      {feedback ? (
+        <div className="col-12">
+          <div className={`inline-feedback inline-feedback--${feedback.severity}`}>{feedback.text}</div>
+        </div>
+      ) : null}
+
       <div className="col-12 xl:col-5">
         <Card
           title="Partidas presupuestarias"
@@ -219,6 +330,17 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
           <div className="panel-actions">
             <Button label="Nueva partida" icon="pi pi-plus" onClick={() => openCategoryDialog()} />
           </div>
+          <ExcelTransferActions
+            inputId="category-import-file"
+            downloadLabel="Descargar ejemplo Excel"
+            importLabel="Importar Excel partidas"
+            importLoading={importingCategories}
+            onDownload={handleDownloadCategoryTemplate}
+            onImport={handleCategoryImport}
+          />
+          <p className="panel-note">
+            Usa una fila por partida con las columnas nombre, descripcion, tipo, naturaleza y activa.
+          </p>
 
           <DataTable value={categoryRows} size="small" paginator rows={8} emptyMessage="No hay partidas definidas.">
             <Column field="name" header="Partida" />
@@ -244,6 +366,18 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
               disabled={categories.length === 0}
             />
           </div>
+          <ExcelTransferActions
+            inputId="budget-import-file"
+            downloadLabel="Descargar ejemplo Excel"
+            importLabel="Importar Excel presupuestos"
+            importDisabled={categories.length === 0}
+            importLoading={importingBudgets}
+            onDownload={handleDownloadBudgetTemplate}
+            onImport={handleBudgetImport}
+          />
+          <p className="panel-note">
+            El fichero debe incluir ano, partida e importe previsto. La partida debe existir previamente.
+          </p>
 
           <DataTable value={budgetRows} size="small" paginator rows={8} emptyMessage="No hay partidas disponibles.">
             <Column field="category.name" header="Partida" />

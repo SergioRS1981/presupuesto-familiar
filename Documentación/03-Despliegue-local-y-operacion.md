@@ -5,14 +5,21 @@
 - Docker Desktop o Docker Compose operativo
 - Node.js si se quiere ejecutar fuera de contenedor
 
-## Variables de entorno
+## Variables de entorno y entornos disponibles
 
-Plantilla base:
+Plantillas disponibles:
 
+- [.env.development.example](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/.env.development.example)
+- [.env.production.example](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/.env.production.example)
 - [.env.local.example](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/.env.local.example)
+
+El archivo `.env.local.example` se conserva como referencia compatible con el flujo historico de desarrollo, pero el esquema recomendado ahora es uno por entorno.
 
 Variables principales:
 
+- `APP_ENV`
+- `NODE_ENV`
+- `COMPOSE_PROJECT_NAME`
 - `POSTGRES_DB`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
@@ -25,49 +32,81 @@ Variables principales:
 - `SONARQUBE_PORT`
 - `SONARQUBE_ADMIN_PASSWORD`
 
-## Arranque local con un comando
+## Separacion entre desarrollo y produccion
 
-El flujo recomendado es:
+Cada entorno queda aislado por tres mecanismos:
+
+- proyecto Docker Compose diferente mediante `COMPOSE_PROJECT_NAME`
+- puertos distintos para frontend, API y PostgreSQL
+- base de datos y volumenes persistentes distintos
+
+Con ello, un desarrollo puede trabajar con datos de prueba mientras produccion mantiene sus propios datos persistidos.
+
+## Arranque de desarrollo
+
+Flujo recomendado:
 
 ```bash
-npm run local:up
+cp .env.development.example .env.development.local
+npm run env:dev:up
 ```
 
 Script implicado:
 
+- [stack.sh](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/scripts/stack.sh)
 - [local-up.sh](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/scripts/local-up.sh)
 
 Comportamiento:
 
-- crea `.env.local` si no existe
+- crea `.env.development.local` si no existe
 - levanta PostgreSQL, API y frontend
 - recompone imagenes con `docker compose up -d --build`
 - muestra las URLs finales
 
 URLs esperadas:
 
-- frontend: `http://localhost:3000`
-- API: `http://localhost:3001/api`
-- healthcheck API: `http://localhost:3001/health`
+- frontend: `http://localhost:3200`
+- API: `http://localhost:3201/api`
+- healthcheck API: `http://localhost:3201/health`
+
+## Arranque de produccion local
+
+Flujo recomendado:
+
+```bash
+cp .env.production.example .env.production.local
+npm run env:prod:up
+```
+
+URLs esperadas:
+
+- frontend: `http://localhost:3300`
+- API: `http://localhost:3301/api`
+- healthcheck API: `http://localhost:3301/health`
 
 ## Logs y parada
 
 Ver logs:
 
 ```bash
-npm run local:logs
+npm run env:dev:logs
 ```
 
 Parar el entorno:
 
 ```bash
-npm run local:down
+npm run env:dev:down
 ```
 
 Scripts relacionados:
 
 - [local-logs.sh](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/scripts/local-logs.sh)
 - [local-down.sh](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/scripts/local-down.sh)
+
+Para produccion se usan:
+
+- `npm run env:prod:logs`
+- `npm run env:prod:down`
 
 ## Servicios definidos en Docker Compose
 
@@ -111,5 +150,4 @@ npm run db:migrate -w @presupuesto/api
 - la API expone `GET /health` para validacion simple
 - los contenedores tienen `healthcheck`
 - el frontend se construye con Vite y se sirve desde Nginx dentro del contenedor
-- la configuracion esta pensada para entorno local, no para un despliegue productivo endurecido
-
+- el entorno `production` sigue siendo una preparacion operativa local o de servidor simple, no un endurecimiento completo enterprise

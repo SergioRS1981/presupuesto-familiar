@@ -5,10 +5,11 @@ WORKDIR /app
 ARG VITE_API_URL=http://localhost:3001/api
 
 COPY package.json ./package.json
+COPY yarn.lock ./yarn.lock
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/web/package.json ./apps/web/package.json
 
-RUN npm install
+RUN corepack enable && yarn install --frozen-lockfile
 
 COPY apps/web ./apps/web
 

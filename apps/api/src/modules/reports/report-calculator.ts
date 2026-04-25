@@ -26,193 +26,134 @@ type Consumption = {
   category: Category;
 };
 
+type ReportSide = {
+  incomeFixed: number;
+  incomeVariable: number;
+  expenseFixed: number;
+  expenseVariable: number;
+  incomeTotal: number;
+  expenseTotal: number;
+  balance: number;
+};
+
+type MonthlyReportRow = {
+  month: number;
+  expenseFixed: number;
+  expenseVariable: number;
+  expenseTotal: number;
+  incomeTotal: number;
+  balance: number;
+};
+
 const toAmount = (value: AmountValue) => Number(value.toString());
 
 const round = (value: number) => Number(value.toFixed(2));
 
+const createEmptySide = (): ReportSide => ({
+  incomeFixed: 0,
+  incomeVariable: 0,
+  expenseFixed: 0,
+  expenseVariable: 0,
+  incomeTotal: 0,
+  expenseTotal: 0,
+  balance: 0
+});
+
+const createEmptyMonthlyRow = (month: number): MonthlyReportRow => ({
+  month,
+  expenseFixed: 0,
+  expenseVariable: 0,
+  expenseTotal: 0,
+  incomeTotal: 0,
+  balance: 0
+});
+
+const assignAmount = (side: ReportSide, kind: BudgetKind, nature: BudgetNature, amount: number) => {
+  if (kind === BudgetKind.INCOME && nature === BudgetNature.FIXED) {
+    side.incomeFixed += amount;
+    return;
+  }
+
+  if (kind === BudgetKind.INCOME && nature === BudgetNature.VARIABLE) {
+    side.incomeVariable += amount;
+    return;
+  }
+
+  if (kind === BudgetKind.EXPENSE && nature === BudgetNature.FIXED) {
+    side.expenseFixed += amount;
+    return;
+  }
+
+  side.expenseVariable += amount;
+};
+
+const finalizeSide = (side: ReportSide): ReportSide => {
+  const incomeFixed = round(side.incomeFixed);
+  const incomeVariable = round(side.incomeVariable);
+  const expenseFixed = round(side.expenseFixed);
+  const expenseVariable = round(side.expenseVariable);
+  const incomeTotal = round(incomeFixed + incomeVariable);
+  const expenseTotal = round(expenseFixed + expenseVariable);
+
+  return {
+    incomeFixed,
+    incomeVariable,
+    expenseFixed,
+    expenseVariable,
+    incomeTotal,
+    expenseTotal,
+    balance: round(incomeTotal - expenseTotal)
+  };
+};
+
+const finalizeMonthlyRow = (row: MonthlyReportRow): MonthlyReportRow => {
+  const expenseFixed = round(row.expenseFixed);
+  const expenseVariable = round(row.expenseVariable);
+  const expenseTotal = round(expenseFixed + expenseVariable);
+  const incomeTotal = round(row.incomeTotal);
+
+  return {
+    month: row.month,
+    expenseFixed,
+    expenseVariable,
+    expenseTotal,
+    incomeTotal,
+    balance: round(incomeTotal - expenseTotal)
+  };
+};
+
 export const calculateReport = (year: number, budgets: Budget[], consumptions: Consumption[]) => {
-  const monthly = Array.from({ length: 12 }, (_, index) => ({
-    month: index + 1,
-    plannedAmount: 0,
-    actualAmount: 0,
-    difference: 0,
-    cumulativePlanned: 0,
-    cumulativeActual: 0,
-    cumulativeDifference: 0
-  }));
-
-  const byItemMap = new Map<
-    string,
-    {
-      categoryId: string;
-      categoryName: string;
-      kind: BudgetKind;
-      nature: BudgetNature;
-      plannedAmount: number;
-      actualAmount: number;
-      difference: number;
-      consumedPercentage: number;
-    }
-  >();
-
-  const byNatureMap = new Map<
-    BudgetNature,
-    { nature: BudgetNature; plannedAmount: number; actualAmount: number; difference: number }
-  >();
-
-  const byKindMap = new Map<
-    BudgetKind,
-    { kind: BudgetKind; plannedAmount: number; actualAmount: number; difference: number }
-  >();
+  const planned = createEmptySide();
+  const actual = createEmptySide();
+  const monthlyActual = Array.from({ length: 12 }, (_, index) => createEmptyMonthlyRow(index + 1));
 
   budgets.forEach((budget) => {
-    const plannedAmount = toAmount(budget.plannedAmount);
-    const monthlyLinear = plannedAmount / 12;
-
-    byItemMap.set(budget.categoryId, {
-      categoryId: budget.categoryId,
-      categoryName: budget.category.name,
-      kind: budget.category.kind,
-      nature: budget.category.nature,
-      plannedAmount,
-      actualAmount: 0,
-      difference: plannedAmount,
-      consumedPercentage: 0
-    });
-
-    const currentNature = byNatureMap.get(budget.category.nature) ?? {
-      nature: budget.category.nature,
-      plannedAmount: 0,
-      actualAmount: 0,
-      difference: 0
-    };
-
-    currentNature.plannedAmount += plannedAmount;
-    currentNature.difference = currentNature.plannedAmount - currentNature.actualAmount;
-    byNatureMap.set(budget.category.nature, currentNature);
-
-    const currentKind = byKindMap.get(budget.category.kind) ?? {
-      kind: budget.category.kind,
-      plannedAmount: 0,
-      actualAmount: 0,
-      difference: 0
-    };
-
-    currentKind.plannedAmount += plannedAmount;
-    currentKind.difference = currentKind.plannedAmount - currentKind.actualAmount;
-    byKindMap.set(budget.category.kind, currentKind);
-
-    monthly.forEach((monthRow) => {
-      monthRow.plannedAmount += monthlyLinear;
-    });
+    assignAmount(planned, budget.category.kind, budget.category.nature, toAmount(budget.plannedAmount));
   });
 
   consumptions.forEach((consumption) => {
-    const actualAmount = toAmount(consumption.actualAmount);
-    const monthRow = monthly[consumption.month - 1];
+    assignAmount(actual, consumption.category.kind, consumption.category.nature, toAmount(consumption.actualAmount));
 
-    monthRow.actualAmount += actualAmount;
+    const monthRow = monthlyActual[consumption.month - 1];
+    const amount = toAmount(consumption.actualAmount);
 
-    const currentItem = byItemMap.get(consumption.categoryId) ?? {
-      categoryId: consumption.categoryId,
-      categoryName: consumption.category.name,
-      kind: consumption.category.kind,
-      nature: consumption.category.nature,
-      plannedAmount: 0,
-      actualAmount: 0,
-      difference: 0,
-      consumedPercentage: 0
-    };
+    if (consumption.category.kind === BudgetKind.INCOME) {
+      monthRow.incomeTotal += amount;
+      return;
+    }
 
-    currentItem.actualAmount += actualAmount;
-    currentItem.difference = currentItem.plannedAmount - currentItem.actualAmount;
-    currentItem.consumedPercentage =
-      currentItem.plannedAmount > 0 ? (currentItem.actualAmount / currentItem.plannedAmount) * 100 : 0;
-    byItemMap.set(consumption.categoryId, currentItem);
+    if (consumption.category.nature === BudgetNature.FIXED) {
+      monthRow.expenseFixed += amount;
+      return;
+    }
 
-    const currentNature = byNatureMap.get(consumption.category.nature) ?? {
-      nature: consumption.category.nature,
-      plannedAmount: 0,
-      actualAmount: 0,
-      difference: 0
-    };
-
-    currentNature.actualAmount += actualAmount;
-    currentNature.difference = currentNature.plannedAmount - currentNature.actualAmount;
-    byNatureMap.set(consumption.category.nature, currentNature);
-
-    const currentKind = byKindMap.get(consumption.category.kind) ?? {
-      kind: consumption.category.kind,
-      plannedAmount: 0,
-      actualAmount: 0,
-      difference: 0
-    };
-
-    currentKind.actualAmount += actualAmount;
-    currentKind.difference = currentKind.plannedAmount - currentKind.actualAmount;
-    byKindMap.set(consumption.category.kind, currentKind);
+    monthRow.expenseVariable += amount;
   });
-
-  let cumulativePlanned = 0;
-  let cumulativeActual = 0;
-
-  monthly.forEach((row) => {
-    row.plannedAmount = round(row.plannedAmount);
-    row.actualAmount = round(row.actualAmount);
-    row.difference = round(row.plannedAmount - row.actualAmount);
-    cumulativePlanned = round(cumulativePlanned + row.plannedAmount);
-    cumulativeActual = round(cumulativeActual + row.actualAmount);
-    row.cumulativePlanned = cumulativePlanned;
-    row.cumulativeActual = cumulativeActual;
-    row.cumulativeDifference = round(cumulativePlanned - cumulativeActual);
-  });
-
-  const byItem = Array.from(byItemMap.values())
-    .map((item) => ({
-      ...item,
-      plannedAmount: round(item.plannedAmount),
-      actualAmount: round(item.actualAmount),
-      difference: round(item.difference),
-      consumedPercentage: round(item.consumedPercentage)
-    }))
-    .sort((left, right) => left.categoryName.localeCompare(right.categoryName));
-
-  const byNature = Array.from(byNatureMap.values()).map((item) => ({
-    ...item,
-    plannedAmount: round(item.plannedAmount),
-    actualAmount: round(item.actualAmount),
-    difference: round(item.difference)
-  }));
-
-  const byKind = Array.from(byKindMap.values()).map((item) => ({
-    ...item,
-    plannedAmount: round(item.plannedAmount),
-    actualAmount: round(item.actualAmount),
-    difference: round(item.difference)
-  }));
-
-  const plannedIncome = byKind.find((item) => item.kind === BudgetKind.INCOME)?.plannedAmount ?? 0;
-  const plannedExpense = byKind.find((item) => item.kind === BudgetKind.EXPENSE)?.plannedAmount ?? 0;
-  const actualIncome = byKind.find((item) => item.kind === BudgetKind.INCOME)?.actualAmount ?? 0;
-  const actualExpense = byKind.find((item) => item.kind === BudgetKind.EXPENSE)?.actualAmount ?? 0;
 
   return {
     year,
-    totals: {
-      plannedIncome,
-      plannedExpense,
-      actualIncome,
-      actualExpense,
-      plannedBalance: round(plannedIncome - plannedExpense),
-      actualBalance: round(actualIncome - actualExpense)
-    },
-    annualBreakdown: {
-      byCategory: byItem,
-      byNature,
-      byKind
-    },
-    monthlyLinearComparison: monthly,
-    byNatureComparison: byNature,
-    byItemComparison: byItem
+    planned: finalizeSide(planned),
+    actual: finalizeSide(actual),
+    monthlyActual: monthlyActual.map(finalizeMonthlyRow)
   };
 };

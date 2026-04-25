@@ -2,6 +2,12 @@
 
 ## Reglas de negocio principales
 
+### Anos configurados
+
+- un ano puede existir en la aplicacion aunque todavia no tenga datos
+- el alta manual de anos se usa para trabajar con ejercicios historicos
+- al registrar presupuesto o consumo para un ano, el sistema asegura su disponibilidad posterior en el selector
+
 ### Partidas presupuestarias
 
 - una partida representa una categoria economica del hogar
@@ -24,8 +30,9 @@
 ### Informes
 
 - los informes se calculan para un ano concreto
-- el presupuesto mensual comparativo se obtiene por linealizacion del anual
-- el porcentaje consumido se calcula sobre el presupuesto anual de la partida
+- los informes muestran previsto y real
+- el informe separa ingresos y gastos en fijo y variable
+- el balance se calcula como total ingresos menos total gastos
 
 ## Glosario funcional
 
@@ -74,4 +81,3 @@ Reparto uniforme del presupuesto anual en doce meses para disponer de una refere
 - los importes se entienden en euros
 - el ano es el eje principal de analisis
 - el sistema busca comparacion y control, no contabilidad oficial
-

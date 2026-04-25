@@ -155,9 +155,24 @@ body {
   margin-bottom: 1rem;
 }
 
+.panel-actions--start {
+  justify-content: flex-start;
+}
+
+.panel-actions--wrap {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .panel-actions--between {
   align-items: center;
   justify-content: space-between;
+}
+
+.panel-note {
+  margin: -0.25rem 0 1rem;
+  color: var(--text-color-secondary);
+  font-size: 0.92rem;
 }
 
 .table-actions {
@@ -191,6 +206,35 @@ body {
 .field .p-dropdown,
 .field .p-inputnumber {
   width: 100%;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.inline-feedback {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  font-size: 0.95rem;
+}
+
+.inline-feedback--success {
+  background: rgba(227, 250, 241, 0.96);
+  color: #11543c;
+}
+
+.inline-feedback--error {
+  background: rgba(255, 237, 229, 0.96);
+  color: #8c2f0f;
 }
 
 .summary-card {

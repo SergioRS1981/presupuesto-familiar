@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma";
 import { HttpError } from "../../lib/http";
 import { z } from "zod";
 import { budgetPayloadSchema } from "./budget.schemas";
+import { ensureYearExists } from "../reports/report.service";
 
 type BudgetPayload = z.infer<typeof budgetPayloadSchema>;
 
@@ -21,6 +22,8 @@ export const upsertBudget = async (payload: BudgetPayload) => {
   if (!category) {
     throw new HttpError(404, "La partida asociada no existe.");
   }
+
+  await ensureYearExists(payload.year);
 
   return prisma.annualBudget.upsert({
     where: {

@@ -6,87 +6,139 @@ Los informes permiten responder a preguntas de negocio como:
 
 - cuanto se esperaba ingresar o gastar este ano
 - cuanto se ha registrado realmente hasta ahora
-- si vamos por encima o por debajo del ritmo esperado
-- que partidas explican la desviacion
+- como se reparte el resultado entre fijo y variable
+- cual es la diferencia entre el balance previsto y el balance real
 
 ## Informes disponibles
 
-### 1. Totales previstos y reales
+La aplicacion muestra tres informes complementarios en formato tabla.
 
-Muestran:
+Tambien permite descargar en CSV:
 
-- ingresos previstos
-- gastos previstos
-- balance previsto
-- balance real
+- el informe completo del ano seleccionado
+- un consolidado de totales por ano para todos los ejercicios disponibles
+
+La calidad del informe depende de que el dato base este bien cargado. Para eso la aplicacion permite mantener partidas, presupuestos y consumos tanto manualmente como por importacion Excel con plantillas guiadas.
+
+### Informe anual
+
+Columnas:
+
+- previsto
+- real
+- diferencia
+
+Filas:
+
+- ingresos fijos
+- ingresos variables
+- total ingresos
+- gastos fijos
+- gastos variables
+- total gastos
+- balance
+
+### Informe mensual real
+
+Columnas:
+
+- mes
+- gastos fijos
+- gastos variables
+- gastos totales
+- ingresos totales
+- balance
+
+Filas:
+
+- enero a diciembre
+
+### Informe por partida
+
+Columnas:
+
+- partida
+- previsto
+- real
+- diferencia
+
+Filas:
+
+- una fila por cada partida con presupuesto o consumo registrado en el ano
+
+## Exportacion CSV
+
+La exportacion esta pensada para reutilizar la informacion fuera de la aplicacion, por ejemplo en hojas de calculo o revisiones compartidas.
+
+Archivos disponibles:
+
+- `informes-AAAA.csv`: incluye resumen anual, detalle mensual y detalle por partida del ano seleccionado
+- `totales-anuales.csv`: incluye una fila por ano con los principales totales previstos y reales
+
+## Como interpretar el informe
+
+### Ingresos fijos e ingresos variables
+
+Permiten ver si la previsibilidad del hogar se apoya mas en entradas estables o en entradas ocasionales.
+
+### Gastos fijos y gastos variables
+
+Permiten distinguir entre compromisos estructurales y gasto con mayor margen de ajuste.
+
+### Total ingresos y total gastos
+
+Dan una lectura global del ejercicio sin perder el detalle fijo/variable.
+
+### Balance
+
+El balance siempre es:
+
+- total ingresos menos total gastos
 
 Interpretacion:
 
 - si el balance real es peor que el previsto, hay una desviacion negativa
-- si el balance real es mejor, la ejecucion va mejor de lo esperado
+- si el balance real es mejor que el previsto, la ejecucion economica va mejor de lo esperado
 
-### 2. Comparativa mensual linealizada
+### Diferencia
 
-Compara:
+La columna `Diferencia` muestra dos datos en una sola celda:
 
-- presupuesto mensual teorico
-- consumo mensual real
+- la desviacion monetaria calculada como real menos previsto
+- el porcentaje que representa el real sobre el previsto
 
-Que significa "linealizado":
+Interpretacion:
 
-- el presupuesto anual se reparte en 12 meses iguales
-- esto crea una referencia estable para comparar el ritmo real
+- `100,0 %` significa que el real coincide exactamente con lo previsto
+- por debajo de `100,0 %` significa que el real queda por debajo del previsto
+- por encima de `100,0 %` significa que el real supera lo previsto
+- si el previsto es `0`, el porcentaje se muestra como `Sin previsto` cuando no existe base comparable
 
-Utilidad:
+### Lectura del informe mensual
 
-- detectar rapidamente si el ano va acelerado en gasto
-- ver meses con tension especial
+Permite detectar:
 
-### 3. Comparativa por naturaleza
+- meses con mayor presion de gasto fijo
+- meses en los que el gasto variable se dispara
+- meses con mejor o peor balance
+- estacionalidad en ingresos y gastos reales
 
-Agrupa por:
+### Lectura del informe por partida
 
-- fijo
-- variable
+Permite detectar:
 
-Utilidad:
-
-- comprobar si el desvio viene de compromisos estructurales o de gasto flexible
-
-Lectura habitual:
-
-- si sube el fijo, hay menos margen de maniobra
-- si sube el variable, puede haber margen de correccion mas rapido
-
-### 4. Comparativa por tipo
-
-Agrupa por:
-
-- ingreso
-- gasto
-
-Utilidad:
-
-- ver si el problema viene de menor ingreso, mayor gasto o ambos
-
-### 5. Comparativa por partida
-
-Muestra por cada partida:
-
-- previsto anual
-- real acumulado
-- diferencia
-- porcentaje consumido
-
-Es el informe mas util para accionar decisiones concretas.
+- partidas que estan muy por debajo del presupuesto previsto
+- partidas que ya han superado el `100,0 %` de ejecucion
+- categorias sin presupuesto previo pero con movimiento real
+- desviaciones relevantes en partidas concretas
 
 ## Indicadores que conviene vigilar
 
 - balance real
-- diferencia mensual
-- diferencia acumulada
-- porcentaje consumido por partida
-- peso del gasto variable frente al gasto fijo
+- diferencia entre balance previsto y real
+- peso del gasto fijo frente al variable
+- diferencia entre ingresos previstos y reales
+- diferencia entre gastos previstos y reales
 
 ## Lecturas tipicas del informe
 
@@ -94,11 +146,11 @@ Es el informe mas util para accionar decisiones concretas.
 
 Interpretacion:
 
-- el hogar esta gastando mas de lo previsto en partidas con mayor capacidad de ajuste
+- el hogar esta gastando mas de lo esperado en la parte con mayor capacidad de correccion
 
 Posible accion:
 
-- revisar partidas como ocio, restauracion o compras no esenciales
+- revisar las categorias variables para reducir tension presupuestaria
 
 ### Situacion 2: gasto fijo alto
 
@@ -119,4 +171,3 @@ Interpretacion:
 Posible accion:
 
 - revisar estimaciones de ingreso y recalibrar el presupuesto anual
-

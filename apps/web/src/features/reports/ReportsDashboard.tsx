@@ -1,65 +1,66 @@
-import "chart.js/auto";
+import { useState } from "react";
+import { Button } from "primereact/button";
 import { Card } from "primereact/card";
-import { Chart } from "primereact/chart";
 import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
-import { Tag } from "primereact/tag";
-import { Report } from "../../api/types";
-import { SummaryCard } from "../../components/SummaryCard";
-import { formatCurrency, formatKind, formatNature } from "../../utils/format";
+import { Budget, Consumption, MonthlyReportRow, Report } from "../../api/types";
+import { api } from "../../api/client";
+import { formatCurrency, formatPercentage } from "../../utils/format";
 import { getMonthName } from "../../utils/months";
+import {
+  ComparisonRow,
+  buildCategoryRows,
+  buildReportCsv,
+  buildSummaryRows,
+  buildYearTotalsCsv,
+  downloadCsvFile
+} from "./report-export";
 
 type ReportsDashboardProps = {
+  availableYears: number[];
   report: Report | null;
+  budgets: Budget[];
+  consumptions: Consumption[];
+  onError?: (message: string) => void;
   year: number;
 };
 
-type NatureComparisonRow = Report["byNatureComparison"][number];
-type KindComparisonRow = Report["annualBreakdown"]["byKind"][number];
-type MonthlyRow = Report["monthlyLinearComparison"][number];
-type ItemRow = Report["byItemComparison"][number];
+const renderLabel = (row: ComparisonRow) => row.label;
 
-const renderNatureComparisonName = (row: NatureComparisonRow) => formatNature(row.nature);
+const renderPlannedAmount = (row: ComparisonRow) => formatCurrency(row.plannedAmount);
 
-const renderNatureComparisonPlanned = (row: NatureComparisonRow) => formatCurrency(row.plannedAmount);
+const renderActualAmount = (row: ComparisonRow) => formatCurrency(row.actualAmount);
 
-const renderNatureComparisonActual = (row: NatureComparisonRow) => formatCurrency(row.actualAmount);
+const renderDifference = (row: ComparisonRow) => {
+  const executionLabel =
+    row.executionRatio === null ? "Sin previsto" : formatPercentage(row.executionRatio);
 
-const renderNatureComparisonDifference = (row: NatureComparisonRow) => formatCurrency(row.difference);
+  return `${formatCurrency(row.differenceAmount)} (${executionLabel})`;
+};
 
-const renderKindComparisonName = (row: KindComparisonRow) => formatKind(row.kind);
+const renderMonthName = (row: MonthlyReportRow) => getMonthName(row.month);
 
-const renderKindComparisonPlanned = (row: KindComparisonRow) => formatCurrency(row.plannedAmount);
+const renderMonthlyExpenseFixed = (row: MonthlyReportRow) => formatCurrency(row.expenseFixed);
 
-const renderKindComparisonActual = (row: KindComparisonRow) => formatCurrency(row.actualAmount);
+const renderMonthlyExpenseVariable = (row: MonthlyReportRow) => formatCurrency(row.expenseVariable);
 
-const renderKindComparisonDifference = (row: KindComparisonRow) => formatCurrency(row.difference);
+const renderMonthlyExpenseTotal = (row: MonthlyReportRow) => formatCurrency(row.expenseTotal);
 
-const renderMonthlyName = (row: MonthlyRow) => getMonthName(row.month);
+const renderMonthlyIncomeTotal = (row: MonthlyReportRow) => formatCurrency(row.incomeTotal);
 
-const renderMonthlyPlanned = (row: MonthlyRow) => formatCurrency(row.plannedAmount);
+const renderMonthlyBalance = (row: MonthlyReportRow) => formatCurrency(row.balance);
 
-const renderMonthlyActual = (row: MonthlyRow) => formatCurrency(row.actualAmount);
+export const ReportsDashboard = ({
+  availableYears,
+  report,
+  budgets,
+  consumptions,
+  onError,
+  year
+}: ReportsDashboardProps) => {
+  const [exportingCurrent, setExportingCurrent] = useState(false);
+  const [exportingTotals, setExportingTotals] = useState(false);
 
-const renderMonthlyDifference = (row: MonthlyRow) => formatCurrency(row.difference);
-
-const renderMonthlyCumulativeDifference = (row: MonthlyRow) => formatCurrency(row.cumulativeDifference);
-
-const renderItemKind = (row: ItemRow) => (
-  <Tag value={formatKind(row.kind)} severity={row.kind === "INCOME" ? "success" : "danger"} />
-);
-
-const renderItemNature = (row: ItemRow) => formatNature(row.nature);
-
-const renderItemPlanned = (row: ItemRow) => formatCurrency(row.plannedAmount);
-
-const renderItemActual = (row: ItemRow) => formatCurrency(row.actualAmount);
-
-const renderItemDifference = (row: ItemRow) => formatCurrency(row.difference);
-
-const renderItemConsumedPercentage = (row: ItemRow) => `${row.consumedPercentage.toFixed(2)}%`;
-
-export const ReportsDashboard = ({ report, year }: ReportsDashboardProps) => {
   if (!report) {
     return (
       <Card title={`Informes ${year}`} className="panel-card">
@@ -68,140 +69,78 @@ export const ReportsDashboard = ({ report, year }: ReportsDashboardProps) => {
     );
   }
 
-  const monthlyChartData = {
-    labels: report.monthlyLinearComparison.map((item) => getMonthName(item.month)),
-    datasets: [
-      {
-        label: "Previsto linealizado",
-        data: report.monthlyLinearComparison.map((item) => item.plannedAmount),
-        borderColor: "#0f766e",
-        backgroundColor: "rgba(15, 118, 110, 0.18)",
-        tension: 0.35
-      },
-      {
-        label: "Real consumido",
-        data: report.monthlyLinearComparison.map((item) => item.actualAmount),
-        borderColor: "#c2410c",
-        backgroundColor: "rgba(194, 65, 12, 0.18)",
-        tension: 0.35
-      }
-    ]
+  const handleExportCurrentYear = () => {
+    try {
+      setExportingCurrent(true);
+      const csv = buildReportCsv({ year, report, budgets, consumptions });
+      downloadCsvFile(csv, `informes-${year}.csv`);
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : "No se pudo generar el CSV del informe.");
+    } finally {
+      setExportingCurrent(false);
+    }
+  };
+
+  const handleExportYearTotals = async () => {
+    try {
+      setExportingTotals(true);
+      const reports = await Promise.all(availableYears.map((value) => api.getAnnualReport(value)));
+      const csv = buildYearTotalsCsv(reports);
+      downloadCsvFile(csv, "totales-anuales.csv");
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : "No se pudo generar el CSV de totales anuales.");
+    } finally {
+      setExportingTotals(false);
+    }
   };
 
   return (
-    <div className="reports-layout">
-      <div className="grid">
-        <div className="col-12 md:col-6 xl:col-3">
-          <SummaryCard
-            title="Ingresos previstos"
-            value={formatCurrency(report.totals.plannedIncome)}
-            caption="Total anual presupuestado de ingresos."
-            accentClassName="summary-card--income"
-            icon={<i className="pi pi-arrow-down-left" />}
+    <Card
+      title={`Informes ${year}`}
+      subTitle="Resumen del ejercicio con ingresos y gastos previstos y reales, separados por naturaleza."
+      className="panel-card"
+    >
+      <div className="flex flex-column gap-4">
+        <div className="flex flex-wrap gap-2 justify-content-end">
+          <Button
+            label={`Descargar informe ${year}`}
+            icon="pi pi-download"
+            outlined
+            loading={exportingCurrent}
+            onClick={handleExportCurrentYear}
+          />
+          <Button
+            label="Descargar totales anuales"
+            icon="pi pi-file-export"
+            outlined
+            loading={exportingTotals}
+            onClick={() => void handleExportYearTotals()}
           />
         </div>
-        <div className="col-12 md:col-6 xl:col-3">
-          <SummaryCard
-            title="Gastos previstos"
-            value={formatCurrency(report.totals.plannedExpense)}
-            caption="Total anual presupuestado de gastos."
-            accentClassName="summary-card--expense"
-            icon={<i className="pi pi-arrow-up-right" />}
-          />
-        </div>
-        <div className="col-12 md:col-6 xl:col-3">
-          <SummaryCard
-            title="Balance previsto"
-            value={formatCurrency(report.totals.plannedBalance)}
-            caption="Diferencia entre ingresos y gastos previstos."
-            accentClassName="summary-card--balance"
-            icon={<i className="pi pi-chart-line" />}
-          />
-        </div>
-        <div className="col-12 md:col-6 xl:col-3">
-          <SummaryCard
-            title="Balance real"
-            value={formatCurrency(report.totals.actualBalance)}
-            caption="Saldo real consumido y registrado hasta ahora."
-            accentClassName="summary-card--actual"
-            icon={<i className="pi pi-wallet" />}
-          />
-        </div>
-      </div>
 
-      <div className="grid">
-        <div className="col-12 xl:col-7">
-          <Card
-            title="Comparativa mensual linealizada"
-            subTitle="Presupuesto previsto por mes frente al consumo real."
-            className="panel-card"
-          >
-            <Chart type="line" data={monthlyChartData} />
-          </Card>
-        </div>
-        <div className="col-12 xl:col-5">
-          <Card
-            title="Comparativa por naturaleza"
-            subTitle="Fijo y variable, previsto vs real."
-            className="panel-card"
-          >
-            <DataTable value={report.byNatureComparison} size="small">
-              <Column field="nature" header="Naturaleza" body={renderNatureComparisonName} />
-              <Column field="plannedAmount" header="Previsto" body={renderNatureComparisonPlanned} />
-              <Column field="actualAmount" header="Real" body={renderNatureComparisonActual} />
-              <Column field="difference" header="Diferencia" body={renderNatureComparisonDifference} />
-            </DataTable>
-          </Card>
-        </div>
-      </div>
-
-      <div className="grid">
-        <div className="col-12 xl:col-6">
-          <Card
-            title="Previsto y acumulado por tipo"
-            subTitle="Ingresos y gastos del ano seleccionado."
-            className="panel-card"
-          >
-            <DataTable value={report.annualBreakdown.byKind} size="small">
-              <Column field="kind" header="Tipo" body={renderKindComparisonName} />
-              <Column field="plannedAmount" header="Previsto" body={renderKindComparisonPlanned} />
-              <Column field="actualAmount" header="Acumulado real" body={renderKindComparisonActual} />
-              <Column field="difference" header="Diferencia" body={renderKindComparisonDifference} />
-            </DataTable>
-          </Card>
-        </div>
-        <div className="col-12 xl:col-6">
-          <Card
-            title="Comparativa mensual detallada"
-            subTitle="Incluye acumulado linealizado y acumulado real."
-            className="panel-card"
-          >
-            <DataTable value={report.monthlyLinearComparison} size="small" paginator rows={6}>
-              <Column field="month" header="Mes" body={renderMonthlyName} />
-              <Column field="plannedAmount" header="Previsto" body={renderMonthlyPlanned} />
-              <Column field="actualAmount" header="Real" body={renderMonthlyActual} />
-              <Column field="difference" header="Diferencia" body={renderMonthlyDifference} />
-              <Column field="cumulativeDifference" header="Dif. acum." body={renderMonthlyCumulativeDifference} />
-            </DataTable>
-          </Card>
-        </div>
-      </div>
-
-      <Card
-        title="Comparativa por partida"
-        subTitle="Presupuesto anual total por partida frente al real consumido y porcentaje ejecutado."
-        className="panel-card"
-      >
-        <DataTable value={report.byItemComparison} size="small" paginator rows={10}>
-          <Column field="categoryName" header="Partida" />
-          <Column field="kind" header="Tipo" body={renderItemKind} />
-          <Column field="nature" header="Naturaleza" body={renderItemNature} />
-          <Column field="plannedAmount" header="Previsto" body={renderItemPlanned} />
-          <Column field="actualAmount" header="Real" body={renderItemActual} />
-          <Column field="difference" header="Diferencia" body={renderItemDifference} />
-          <Column field="consumedPercentage" header="% consumido" body={renderItemConsumedPercentage} />
+        <DataTable value={buildSummaryRows(report)} size="small">
+          <Column field="label" header="Concepto" body={renderLabel} />
+          <Column field="plannedAmount" header="Previsto" body={renderPlannedAmount} />
+          <Column field="actualAmount" header="Real" body={renderActualAmount} />
+          <Column field="differenceAmount" header="Diferencia" body={renderDifference} />
         </DataTable>
-      </Card>
-    </div>
+
+        <DataTable value={report.monthlyActual} size="small">
+          <Column field="month" header="Mes" body={renderMonthName} />
+          <Column field="expenseFixed" header="Gastos fijos" body={renderMonthlyExpenseFixed} />
+          <Column field="expenseVariable" header="Gastos variables" body={renderMonthlyExpenseVariable} />
+          <Column field="expenseTotal" header="Gastos totales" body={renderMonthlyExpenseTotal} />
+          <Column field="incomeTotal" header="Ingresos totales" body={renderMonthlyIncomeTotal} />
+          <Column field="balance" header="Balance" body={renderMonthlyBalance} />
+        </DataTable>
+
+        <DataTable value={buildCategoryRows(budgets, consumptions)} size="small" emptyMessage="No hay partidas con datos para este ano.">
+          <Column field="label" header="Partida" body={renderLabel} />
+          <Column field="plannedAmount" header="Previsto" body={renderPlannedAmount} />
+          <Column field="actualAmount" header="Real" body={renderActualAmount} />
+          <Column field="differenceAmount" header="Diferencia" body={renderDifference} />
+        </DataTable>
+      </div>
+    </Card>
   );
 };

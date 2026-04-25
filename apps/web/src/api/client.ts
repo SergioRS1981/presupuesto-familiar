@@ -1,4 +1,4 @@
-import { Budget, Category, Consumption, Report } from "./types";
+import { Budget, Category, ConfiguredYear, Consumption, Report } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/api";
 
@@ -50,5 +50,6 @@ export const api = {
   deleteConsumption: (id: string) => request<void>(`/consumptions/${id}`, { method: "DELETE" }),
 
   getYears: () => request<number[]>("/reports/years"),
+  createYear: (payload: { year: number }) => request<ConfiguredYear>("/reports/years", { method: "POST", body: payload }),
   getAnnualReport: (year: number) => request<Report>(`/reports/annual?year=${year}`)
 };

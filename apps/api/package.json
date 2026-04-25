@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --coverage.reportsDirectory=../../coverage/api",
     "db:migrate": "prisma db push",
+    "db:deploy": "sh ./prisma-deploy.sh",
     "db:generate": "prisma generate"
   },
   "dependencies": {

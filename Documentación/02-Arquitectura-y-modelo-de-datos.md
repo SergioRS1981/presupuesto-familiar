@@ -14,6 +14,13 @@ Relacion entre piezas:
 - la API usa Prisma para leer y escribir en PostgreSQL
 - Docker Compose levanta frontend, API, base de datos y SonarQube
 
+Separacion por entornos:
+
+- el mismo `docker-compose.yml` se parametriza para `development` y `production`
+- cada entorno se arranca con un `COMPOSE_PROJECT_NAME` distinto
+- eso genera redes, contenedores y volumenes independientes
+- cada entorno apunta a una base de datos diferente, por lo que los datos no se mezclan
+
 ## Frontend
 
 Punto de entrada principal:
@@ -25,7 +32,7 @@ Responsabilidades principales del frontend:
 - cargar categorias, presupuestos, consumos, anos e informe anual
 - mantener el ano seleccionado
 - mostrar formularios y tablas de gestion
-- presentar dashboards y comparativas
+- presentar un resumen anual previsto vs real
 
 Pantallas y componentes clave:
 
@@ -34,7 +41,7 @@ Pantallas y componentes clave:
 - [ConsumptionManager.tsx](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/apps/web/src/features/consumptions/ConsumptionManager.tsx)
   - gestiona consumos mensuales reales
 - [ReportsDashboard.tsx](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/apps/web/src/features/reports/ReportsDashboard.tsx)
-  - muestra indicadores e informes comparativos
+  - muestra el resumen anual previsto vs real
 - [client.ts](/Users/sergio/Library/Mobile%20Documents/com~apple~CloudDocs/Presupuesto%20Familiar/App/apps/web/src/api/client.ts)
   - cliente HTTP del frontend
 
@@ -71,6 +78,16 @@ Definido en:
 
 Entidades principales:
 
+### `ConfiguredYear`
+
+Representa un ano habilitado en la aplicacion.
+
+Su funcion es permitir que un ejercicio aparezca en el selector aunque todavia no tenga presupuestos ni consumos.
+
+Campo clave:
+
+- `year`
+
 ### `BudgetCategory`
 
 Representa una partida presupuestaria.
@@ -96,6 +113,7 @@ Campos clave:
 Restriccion importante:
 
 - combinacion unica `year + categoryId`
+- al guardar un presupuesto se asegura tambien la existencia del ano configurado
 
 ### `MonthlyConsumption`
 
@@ -111,16 +129,31 @@ Campos clave:
 Restriccion importante:
 
 - combinacion unica `year + month + categoryId`
+- al guardar un consumo se asegura tambien la existencia del ano configurado
 
 ## Informes calculados
 
 La API devuelve un objeto `Report` con:
 
-- totales previstos y reales
-- comparativa anual por categoria
-- comparativa por naturaleza
-- comparativa por tipo
-- comparativa mensual linealizada con acumulados
+- un bloque `planned`
+- un bloque `actual`
+- una coleccion `monthlyActual`
 
-La idea de "linealizado" es repartir el presupuesto anual de cada partida en 12 meses iguales para poder compararlo contra el consumo real mensual.
+Cada bloque contiene:
 
+- ingresos fijos
+- ingresos variables
+- gastos fijos
+- gastos variables
+- total de ingresos
+- total de gastos
+- balance
+
+La coleccion `monthlyActual` contiene 12 filas, una por mes, con:
+
+- mes
+- gastos fijos reales
+- gastos variables reales
+- gastos totales reales
+- ingresos totales reales
+- balance real del mes

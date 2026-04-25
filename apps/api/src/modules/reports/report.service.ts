@@ -16,8 +16,28 @@ export const getAnnualReport = async (year: number) => {
   return calculateReport(year, budgets, consumptions);
 };
 
+export const ensureYearExists = async (year: number) => {
+  await prisma.configuredYear.upsert({
+    where: { year },
+    update: {},
+    create: { year }
+  });
+};
+
+export const createAvailableYear = async (year: number) => {
+  return prisma.configuredYear.upsert({
+    where: { year },
+    update: {},
+    create: { year }
+  });
+};
+
 export const getAvailableYears = async () => {
-  const [budgetYears, consumptionYears] = await Promise.all([
+  const [configuredYears, budgetYears, consumptionYears] = await Promise.all([
+    prisma.configuredYear.findMany({
+      select: { year: true },
+      orderBy: { year: "asc" }
+    }),
     prisma.annualBudget.findMany({
       select: { year: true },
       distinct: ["year"],
@@ -30,7 +50,7 @@ export const getAvailableYears = async () => {
     })
   ]);
 
-  const years = Array.from(new Set([...budgetYears, ...consumptionYears].map((item) => item.year))).sort(
+  const years = Array.from(new Set([...configuredYears, ...budgetYears, ...consumptionYears].map((item) => item.year))).sort(
     (left, right) => left - right
   );
 

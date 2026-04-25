@@ -1,0 +1,107 @@
+name: Release Images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release-images
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          yarn install --frozen-lockfile
+
+      - name: Build workspaces
+        run: yarn build
+
+      - name: Run test suite
+        run: yarn test
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: quality-gate
+    outputs:
+      api_image: ${{ steps.image-vars.outputs.api_image }}
+      web_image: ${{ steps.image-vars.outputs.web_image }}
+      image_tag: ${{ steps.image-vars.outputs.image_tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive image names
+        id: image-vars
+        run: |
+          owner="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          repo="$(printf '%s' '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')"
+          echo "api_image=ghcr.io/${owner}/${repo}-api" >> "$GITHUB_OUTPUT"
+          echo "web_image=ghcr.io/${owner}/${repo}-web" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.image-vars.outputs.api_image }}:${{ steps.image-vars.outputs.image_tag }}
+            ${{ steps.image-vars.outputs.api_image }}:main
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          build-args: |
+            VITE_API_URL=${{ secrets.PROD_VITE_API_URL }}
+          tags: |
+            ${{ steps.image-vars.outputs.web_image }}:${{ steps.image-vars.outputs.image_tag }}
+            ${{ steps.image-vars.outputs.web_image }}:main
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Publish release summary
+        run: |
+          {
+            echo "## Imagenes publicadas"
+            echo ""
+            echo "- API: \`${{ steps.image-vars.outputs.api_image }}:${{ steps.image-vars.outputs.image_tag }}\`"
+            echo "- Web: \`${{ steps.image-vars.outputs.web_image }}:${{ steps.image-vars.outputs.image_tag }}\`"
+            echo ""
+            echo "Para promover a produccion, ejecuta manualmente el workflow \`Deploy Production\` con ese tag o con \`main\`."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -47,6 +47,7 @@
 
 - no hay autenticacion todavia
 - la configuracion actual esta orientada a entorno local
+- aunque ya existen entornos separados de desarrollo y produccion, el endurecimiento de produccion aun puede crecer
 - el bundle frontend puede optimizarse
 - la cobertura global del proyecto aun puede crecer, aunque la cobertura nueva ya cumple el Quality Gate
 
@@ -58,4 +59,3 @@ Si el objetivo es evolucionar el proyecto con criterio, el siguiente bloque de t
 2. datos semilla
 3. CI con tests y SonarQube
 4. optimizacion del bundle frontend
-

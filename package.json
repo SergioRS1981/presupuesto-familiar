@@ -1,6 +1,7 @@
 {
   "name": "presupuesto-familiar-app",
   "private": true,
+  "packageManager": "yarn@1.22.22",
   "workspaces": [
     "apps/*"
   ],
@@ -11,6 +12,12 @@
     "test": "npm run test -w @presupuesto/api && npm run test -w @presupuesto/web",
     "db:migrate": "npm run db:migrate -w @presupuesto/api",
     "db:generate": "npm run db:generate -w @presupuesto/api",
+    "env:dev:up": "sh ./scripts/stack.sh up development",
+    "env:dev:down": "sh ./scripts/stack.sh down development",
+    "env:dev:logs": "sh ./scripts/stack.sh logs development",
+    "env:prod:up": "sh ./scripts/stack.sh up production",
+    "env:prod:down": "sh ./scripts/stack.sh down production",
+    "env:prod:logs": "sh ./scripts/stack.sh logs production",
     "local:up": "./scripts/local-up.sh",
     "local:down": "./scripts/local-down.sh",
     "local:logs": "./scripts/local-logs.sh",

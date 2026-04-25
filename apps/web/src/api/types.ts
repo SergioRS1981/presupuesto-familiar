@@ -1,6 +1,10 @@
 export type BudgetKind = "INCOME" | "EXPENSE";
 export type BudgetNature = "FIXED" | "VARIABLE";
 
+export type ConfiguredYear = {
+  year: number;
+};
+
 export type Category = {
   id: string;
   name: string;
@@ -27,63 +31,28 @@ export type Consumption = {
   category: Category;
 };
 
+export type ReportSide = {
+  incomeFixed: number;
+  incomeVariable: number;
+  expenseFixed: number;
+  expenseVariable: number;
+  incomeTotal: number;
+  expenseTotal: number;
+  balance: number;
+};
+
+export type MonthlyReportRow = {
+  month: number;
+  expenseFixed: number;
+  expenseVariable: number;
+  expenseTotal: number;
+  incomeTotal: number;
+  balance: number;
+};
+
 export type Report = {
   year: number;
-  totals: {
-    plannedIncome: number;
-    plannedExpense: number;
-    actualIncome: number;
-    actualExpense: number;
-    plannedBalance: number;
-    actualBalance: number;
-  };
-  annualBreakdown: {
-    byCategory: Array<{
-      categoryId: string;
-      categoryName: string;
-      kind: BudgetKind;
-      nature: BudgetNature;
-      plannedAmount: number;
-      actualAmount: number;
-      difference: number;
-      consumedPercentage: number;
-    }>;
-    byNature: Array<{
-      nature: BudgetNature;
-      plannedAmount: number;
-      actualAmount: number;
-      difference: number;
-    }>;
-    byKind: Array<{
-      kind: BudgetKind;
-      plannedAmount: number;
-      actualAmount: number;
-      difference: number;
-    }>;
-  };
-  monthlyLinearComparison: Array<{
-    month: number;
-    plannedAmount: number;
-    actualAmount: number;
-    difference: number;
-    cumulativePlanned: number;
-    cumulativeActual: number;
-    cumulativeDifference: number;
-  }>;
-  byNatureComparison: Array<{
-    nature: BudgetNature;
-    plannedAmount: number;
-    actualAmount: number;
-    difference: number;
-  }>;
-  byItemComparison: Array<{
-    categoryId: string;
-    categoryName: string;
-    kind: BudgetKind;
-    nature: BudgetNature;
-    plannedAmount: number;
-    actualAmount: number;
-    difference: number;
-    consumedPercentage: number;
-  }>;
+  planned: ReportSide;
+  actual: ReportSide;
+  monthlyActual: MonthlyReportRow[];
 };

@@ -10,12 +10,23 @@ import { api } from "../../api/client";
 import { Category, Consumption } from "../../api/types";
 import { formatCurrency, formatKind, formatNature } from "../../utils/format";
 import { getMonthName, monthOptions } from "../../utils/months";
+import { ExcelTransferActions } from "../imports/ExcelTransferActions";
+import {
+  downloadConsumptionTemplateWorkbook,
+  getCategoryLookupKey,
+  readConsumptionImportFile
+} from "../imports/excel-import";
 
 type ConsumptionManagerProps = {
   year: number;
   categories: Category[];
   consumptions: Consumption[];
   onReload: () => Promise<void>;
+};
+
+type Feedback = {
+  severity: "success" | "error";
+  text: string;
 };
 
 type ConsumptionRow = Consumption & {
@@ -41,6 +52,8 @@ const renderConsumptionActions = (row: ConsumptionRow) => (
 export const ConsumptionManager = ({ year, categories, consumptions, onReload }: ConsumptionManagerProps) => {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(categories[0]?.id ?? null);
   const [selectedMonth, setSelectedMonth] = useState<number>(1);
   const [actualAmount, setActualAmount] = useState<number>(0);
@@ -62,6 +75,7 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
       return;
     }
 
+    setFeedback(null);
     setSaving(true);
 
     try {
@@ -84,8 +98,51 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
       return;
     }
 
+    setFeedback(null);
     await api.deleteConsumption(consumption.id);
     await onReload();
+  };
+
+  const handleDownloadTemplate = async () => {
+    await downloadConsumptionTemplateWorkbook({ year, categories });
+  };
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    setFeedback(null);
+
+    try {
+      const rows = await readConsumptionImportFile(file, year);
+      const categoryMap = new Map(categories.map((category) => [getCategoryLookupKey(category.name), category]));
+
+      for (const row of rows) {
+        const category = categoryMap.get(getCategoryLookupKey(row.categoryName));
+
+        if (!category) {
+          throw new Error(`La partida "${row.categoryName}" no existe. Importa o crea antes esa partida.`);
+        }
+
+        await api.saveConsumption({
+          year: row.year,
+          month: row.month,
+          categoryId: category.id,
+          actualAmount: row.actualAmount
+        });
+      }
+
+      await onReload();
+      setFeedback({
+        severity: "success",
+        text: `Importacion completada. Consumos actualizados: ${rows.length}.`
+      });
+    } catch (error) {
+      setFeedback({
+        severity: "error",
+        text: error instanceof Error ? error.message : "No se pudo importar el Excel de consumos."
+      });
+    } finally {
+      setImporting(false);
+    }
   };
 
   const consumptionRows = useMemo<ConsumptionRow[]>(
@@ -113,6 +170,19 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
         </div>
         <Button label="Nuevo consumo" icon="pi pi-plus" onClick={() => openDialog()} disabled={categories.length === 0} />
       </div>
+      <ExcelTransferActions
+        inputId="consumption-import-file"
+        downloadLabel="Descargar ejemplo Excel"
+        importLabel="Importar Excel consumos"
+        importDisabled={categories.length === 0}
+        importLoading={importing}
+        onDownload={handleDownloadTemplate}
+        onImport={handleImport}
+      />
+      <p className="panel-note">
+        El fichero debe incluir ano, mes, partida e importe real. La partida debe existir previamente.
+      </p>
+      {feedback ? <div className={`inline-feedback inline-feedback--${feedback.severity}`}>{feedback.text}</div> : null}
 
       <DataTable value={consumptionRows} size="small" paginator rows={10} emptyMessage="No hay consumos registrados.">
         <Column field="category.name" header="Partida" />

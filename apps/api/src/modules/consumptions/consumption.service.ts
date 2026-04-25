@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma";
 import { HttpError } from "../../lib/http";
 import { z } from "zod";
 import { consumptionPayloadSchema } from "./consumption.schemas";
+import { ensureYearExists } from "../reports/report.service";
 
 type ConsumptionPayload = z.infer<typeof consumptionPayloadSchema>;
 
@@ -21,6 +22,8 @@ export const upsertConsumption = async (payload: ConsumptionPayload) => {
   if (!category) {
     throw new HttpError(404, "La partida asociada no existe.");
   }
+
+  await ensureYearExists(payload.year);
 
   return prisma.monthlyConsumption.upsert({
     where: {
