@@ -27,7 +27,7 @@ Variables principales:
 - `API_PORT`
 - `WEB_PORT`
 - `WEB_PUBLIC_URL`
-- `VITE_API_URL`
+- `VITE_DEV_API_TARGET`
 - `RATE_LIMIT_MAX`
 - `SONARQUBE_PORT`
 - `SONARQUBE_ADMIN_PASSWORD`
@@ -138,6 +138,12 @@ Frontend:
 ```bash
 npm run dev -w @presupuesto/web
 ```
+
+Notas de desarrollo frontend:
+
+- el frontend usa `/api` por defecto
+- Vite reenvia `/api` al backend local usando `proxy`
+- si necesitas cambiar el backend del proxy, configura `VITE_DEV_API_TARGET`
 
 Base de datos:
 

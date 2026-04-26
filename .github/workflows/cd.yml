@@ -90,8 +90,6 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
-          build-args: |
-            VITE_API_URL=${{ secrets.PROD_VITE_API_URL }}
           tags: |
             ${{ steps.image-vars.outputs.web_image }}:${{ steps.image-vars.outputs.image_tag }}
             ${{ steps.image-vars.outputs.web_image }}:main

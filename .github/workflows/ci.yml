@@ -64,5 +64,3 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: false
-          build-args: |
-            VITE_API_URL=http://localhost:3001/api

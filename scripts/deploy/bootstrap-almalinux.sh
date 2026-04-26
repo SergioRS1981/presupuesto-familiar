@@ -6,6 +6,7 @@ DOMAIN="${1:-presupuestofamiliar.rodriguezgalvan.es}"
 EMAIL="${2:-}"
 APP_DIR="${3:-/opt/presupuesto-familiar}"
 NGINX_CONF="/etc/nginx/conf.d/presupuesto-familiar.conf"
+CERTBOT_BIN=""
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Ejecuta este script como root."
@@ -73,11 +74,24 @@ if [ ! -x /usr/local/bin/certbot ] && [ ! -x /usr/bin/certbot ]; then
   ln -sf /snap/bin/certbot /usr/local/bin/certbot
 fi
 
+if [ -x /usr/local/bin/certbot ]; then
+  CERTBOT_BIN="/usr/local/bin/certbot"
+elif [ -x /usr/bin/certbot ]; then
+  CERTBOT_BIN="/usr/bin/certbot"
+elif [ -x /snap/bin/certbot ]; then
+  CERTBOT_BIN="/snap/bin/certbot"
+else
+  echo "No se ha encontrado certbot tras la instalacion."
+  echo "Prueba a cerrar sesion SSH, volver a entrar y ejecutar:"
+  echo "certbot --nginx -d $DOMAIN -d www.$DOMAIN"
+  exit 1
+fi
+
 if [ -n "$EMAIL" ]; then
-  certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect
+  "$CERTBOT_BIN" --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect
 else
   echo "Certbot instalado. Ejecuta manualmente:"
-  echo "certbot --nginx -d $DOMAIN -d www.$DOMAIN"
+  echo "$CERTBOT_BIN --nginx -d $DOMAIN -d www.$DOMAIN"
 fi
 
 echo "Bootstrap completado."

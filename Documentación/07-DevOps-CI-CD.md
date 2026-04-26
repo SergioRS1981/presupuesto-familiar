@@ -97,16 +97,6 @@ Con este flujo:
 
 ## Secretos necesarios en GitHub
 
-### Para construir la imagen web
-
-- `PROD_VITE_API_URL`
-
-Ejemplo:
-
-```text
-https://presupuesto.midominio.com/api
-```
-
 ### Para conectar con el VPS
 
 - `VPS_HOST`
@@ -229,6 +219,7 @@ docker compose -f docker-compose.deploy.yml --env-file .env.production up -d
 
 - `docker-compose.deploy.yml` no expone PostgreSQL publicamente.
 - `docker-compose.deploy.yml` expone API y web solo en `127.0.0.1`, para que Nginx sea el unico punto publico.
+- El frontend usa `/api` por defecto, asi que la misma imagen web sirve para local y produccion sin recompilar por dominio.
 - La imagen de API aplica `prisma migrate deploy` si existen migraciones versionadas.
 - Si no existieran migraciones, mantiene compatibilidad con `prisma db push`.
 - En produccion se usa un servicio `api-migrate` para ejecutar migraciones antes del rollout de la API.

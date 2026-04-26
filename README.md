@@ -70,6 +70,8 @@ La aplicacion quedara disponible en:
 - Frontend: `http://localhost:3200`
 - API: `http://localhost:3201/api`
 
+Cuando ejecutes el frontend con `vite`, la aplicacion usara `/api` por defecto y el proxy de desarrollo reenviara esas peticiones a `http://localhost:3001`.
+
 Comandos utiles:
 
 ```bash
