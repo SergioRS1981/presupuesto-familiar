@@ -69,6 +69,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
@@ -78,8 +81,8 @@ jobs:
           tags: |
             ${{ steps.image-vars.outputs.api_image }}:${{ steps.image-vars.outputs.image_tag }}
             ${{ steps.image-vars.outputs.api_image }}:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=api-image
+          cache-to: type=gha,mode=max,scope=api-image
 
       - name: Build and push web image
         uses: docker/build-push-action@v6
@@ -92,8 +95,8 @@ jobs:
           tags: |
             ${{ steps.image-vars.outputs.web_image }}:${{ steps.image-vars.outputs.image_tag }}
             ${{ steps.image-vars.outputs.web_image }}:main
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=web-image
+          cache-to: type=gha,mode=max,scope=web-image
 
       - name: Publish release summary
         run: |
