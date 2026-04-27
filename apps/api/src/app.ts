@@ -4,6 +4,8 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { env } from "./config/env";
 import { HttpError } from "./lib/http";
+import { authRouter } from "./modules/auth/auth.routes";
+import { requireAuth } from "./modules/auth/auth.middleware";
 import { budgetRouter } from "./modules/budgets/budget.routes";
 import { categoryRouter } from "./modules/categories/category.routes";
 import { consumptionRouter } from "./modules/consumptions/consumption.routes";
@@ -22,7 +24,8 @@ app.use(
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   })
 );
 
@@ -40,6 +43,9 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+app.use(`${env.API_PREFIX}/auth`, authRouter);
+app.use(env.API_PREFIX, requireAuth);
 
 app.use(`${env.API_PREFIX}/categories`, categoryRouter);
 app.use(`${env.API_PREFIX}/budgets`, budgetRouter);

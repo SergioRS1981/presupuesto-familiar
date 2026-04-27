@@ -31,6 +31,10 @@ services:
       API_PREFIX: /api
       CORS_ORIGIN: ${WEB_PUBLIC_URL:?WEB_PUBLIC_URL is required}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      AUTH_USERNAME: ${AUTH_USERNAME:?AUTH_USERNAME is required}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?AUTH_PASSWORD_HASH is required}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
       SKIP_DB_DEPLOY: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
     ports:
@@ -50,6 +54,10 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-production}
       NODE_ENV: ${NODE_ENV:-production}
+      AUTH_USERNAME: ${AUTH_USERNAME:?AUTH_USERNAME is required}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?AUTH_PASSWORD_HASH is required}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
     entrypoint: ["sh", "./docker-migrate.sh"]
 

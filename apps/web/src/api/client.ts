@@ -1,4 +1,4 @@
-import { Budget, Category, ConfiguredYear, Consumption, Report } from "./types";
+import { AuthSession, Budget, Category, ConfiguredYear, Consumption, Report } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -6,8 +6,15 @@ type SafeRequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
+export class UnauthorizedError extends Error {
+  constructor(message = "Debes iniciar sesion para continuar.") {
+    super(message);
+  }
+}
+
 const request = async <T>(path: string, options: SafeRequestOptions = {}): Promise<T> => {
   const response = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers ?? {})
@@ -21,6 +28,10 @@ const request = async <T>(path: string, options: SafeRequestOptions = {}): Promi
       message?: string;
     };
 
+    if (response.status === 401) {
+      throw new UnauthorizedError(errorBody.message);
+    }
+
     throw new Error(errorBody.message ?? "Error inesperado.");
   }
 
@@ -32,6 +43,11 @@ const request = async <T>(path: string, options: SafeRequestOptions = {}): Promi
 };
 
 export const api = {
+  getSession: () => request<AuthSession>("/auth/session"),
+  login: (payload: { username: string; password: string }) =>
+    request<AuthSession>("/auth/login", { method: "POST", body: payload }),
+  logout: () => request<void>("/auth/logout", { method: "POST" }),
+
   getCategories: () => request<Category[]>("/categories"),
   createCategory: (payload: Partial<Category>) =>
     request<Category>("/categories", { method: "POST", body: payload }),

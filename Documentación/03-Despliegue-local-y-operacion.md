@@ -29,6 +29,10 @@ Variables principales:
 - `WEB_PUBLIC_URL`
 - `VITE_DEV_API_TARGET`
 - `RATE_LIMIT_MAX`
+- `AUTH_USERNAME`
+- `AUTH_PASSWORD_HASH`
+- `SESSION_SECRET`
+- `SESSION_TTL_HOURS`
 - `SONARQUBE_PORT`
 - `SONARQUBE_ADMIN_PASSWORD`
 
@@ -48,6 +52,7 @@ Flujo recomendado:
 
 ```bash
 cp .env.development.example .env.development.local
+node scripts/generate-auth-credentials.mjs sergio "TuContrasenaSegura"
 npm run env:dev:up
 ```
 
@@ -69,6 +74,35 @@ URLs esperadas:
 - API: `http://localhost:3201/api`
 - healthcheck API: `http://localhost:3201/health`
 
+El login de desarrollo debe definirse en tu `.env.development.local`, que queda fuera de Git por `.gitignore`.
+
+Contenido recomendado para `.env.development.local`:
+
+```env
+APP_ENV=development
+NODE_ENV=development
+COMPOSE_PROJECT_NAME=presupuesto-dev
+POSTGRES_DB=presupuesto_familiar_dev
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_PORT=5442
+API_PORT=3201
+WEB_PORT=3200
+WEB_PUBLIC_URL=http://localhost:3200
+RATE_LIMIT_MAX=300
+AUTH_USERNAME=sergio
+AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
+SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
+SESSION_TTL_HOURS=12
+SONARQUBE_PORT=9000
+SONARQUBE_ADMIN_PASSWORD=SonarLocal123!
+SONARQUBE_TOKEN_NAME=presupuesto-development-scan
+SONARQUBE_DB=sonarqube_dev
+SONARQUBE_DB_USER=sonarqube
+SONARQUBE_DB_PASSWORD=sonarqube
+VITE_DEV_API_TARGET=http://localhost:3001
+```
+
 ## Arranque de produccion local
 
 Flujo recomendado:
@@ -83,6 +117,27 @@ URLs esperadas:
 - frontend: `http://localhost:3300`
 - API: `http://localhost:3301/api`
 - healthcheck API: `http://localhost:3301/health`
+
+Contenido recomendado para `.env.production.local`:
+
+```env
+APP_ENV=production
+NODE_ENV=production
+COMPOSE_PROJECT_NAME=presupuesto-prod
+POSTGRES_DB=presupuesto_familiar_prod
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=CAMBIA_ESTA_PASSWORD_LARGA
+API_PORT=3001
+WEB_PORT=3000
+WEB_PUBLIC_URL=https://presupuestofamiliar.rodriguezgalvan.es
+RATE_LIMIT_MAX=300
+AUTH_USERNAME=admin
+AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
+SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
+SESSION_TTL_HOURS=12
+BACKUP_BEFORE_DEPLOY=true
+BACKUP_RETENTION_DAYS=14
+```
 
 ## Logs y parada
 
@@ -144,6 +199,9 @@ Notas de desarrollo frontend:
 - el frontend usa `/api` por defecto
 - Vite reenvia `/api` al backend local usando `proxy`
 - si necesitas cambiar el backend del proxy, configura `VITE_DEV_API_TARGET`
+- la autenticacion queda separada por entorno usando usuario, hash de contrasena y secreto de sesion propios
+- genera esos valores con `node scripts/generate-auth-credentials.mjs admin "TuContrasenaSegura"`
+- puedes verificar que Git ignora tus archivos locales con `git check-ignore -v .env.development.local .env.production.local`
 
 Base de datos:
 

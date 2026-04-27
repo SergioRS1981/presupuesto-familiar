@@ -5,8 +5,8 @@ import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Dropdown, DropdownChangeEvent } from "primereact/dropdown";
 import { TabPanel, TabView } from "primereact/tabview";
-import { api } from "./api/client";
-import { Budget, Category, Consumption, Report } from "./api/types";
+import { api, UnauthorizedError } from "./api/client";
+import { AuthSession, Budget, Category, Consumption, Report } from "./api/types";
 import { BudgetManager } from "./features/budgets/BudgetManager";
 import { ConsumptionManager } from "./features/consumptions/ConsumptionManager";
 import { ReportsDashboard } from "./features/reports/ReportsDashboard";
@@ -22,10 +22,25 @@ export const App = () => {
   const [consumptions, setConsumptions] = useState<Consumption[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [yearDialogVisible, setYearDialogVisible] = useState(false);
   const [yearToCreate, setYearToCreate] = useState<number | null>(null);
   const [creatingYear, setCreatingYear] = useState(false);
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+
+  const resetDashboardState = () => {
+    setCategories([]);
+    setBudgets([]);
+    setConsumptions([]);
+    setReport(null);
+    setAvailableYears([currentYear]);
+    setYear(currentYear);
+  };
 
   const dashboardSummary = useMemo(() => {
     const planned = budgets.reduce((accumulator, item) => accumulator + Number(item.plannedAmount), 0);
@@ -71,6 +86,13 @@ export const App = () => {
       setAvailableYears(Array.from(new Set([...years, selectedYear])).sort((left, right) => left - right));
       setReport(loadedReport);
     } catch (loadError) {
+      if (loadError instanceof UnauthorizedError) {
+        setSession(null);
+        resetDashboardState();
+        setLoginError(loadError.message);
+        return;
+      }
+
       setError(loadError instanceof Error ? loadError.message : "No se pudieron cargar los datos.");
     } finally {
       setLoading(false);
@@ -78,8 +100,40 @@ export const App = () => {
   };
 
   useEffect(() => {
-    void loadData(year);
-  }, [year]);
+    const restoreSession = async () => {
+      setAuthChecking(true);
+
+      try {
+        const currentSession = await api.getSession();
+
+        if (currentSession.authenticated) {
+          setSession(currentSession);
+        } else {
+          setSession(null);
+          resetDashboardState();
+          setLoading(false);
+        }
+      } catch (sessionError) {
+        setLoginError(sessionError instanceof Error ? sessionError.message : "No se pudo validar la sesion.");
+        setSession(null);
+        resetDashboardState();
+        setLoading(false);
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+
+    void restoreSession();
+  }, []);
+
+  useEffect(() => {
+    if (session?.authenticated) {
+      void loadData(year);
+      return;
+    }
+
+    setLoading(false);
+  }, [session?.authenticated, year]);
 
   useEffect(() => {
     if (addablePastYears.length === 0) {
@@ -122,6 +176,99 @@ export const App = () => {
     }
   };
 
+  const handleLogin = async () => {
+    setLoggingIn(true);
+    setLoginError(null);
+
+    try {
+      const currentSession = await api.login({
+        username: loginUsername,
+        password: loginPassword
+      });
+
+      setSession(currentSession);
+      setLoginPassword("");
+    } catch (loginFailure) {
+      setLoginError(loginFailure instanceof Error ? loginFailure.message : "No se pudo iniciar sesion.");
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      setSession(null);
+      setError(null);
+      setLoginError(null);
+      setLoginPassword("");
+      resetDashboardState();
+    }
+  };
+
+  if (authChecking) {
+    return (
+      <main className="auth-shell">
+        <div className="loading-state">
+          <ProgressSpinner />
+        </div>
+      </main>
+    );
+  }
+
+  if (!session?.authenticated) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <div className="auth-card__copy">
+            <span className="hero__eyebrow">Acceso protegido</span>
+            <h1>Inicia sesion para acceder a tu presupuesto familiar.</h1>
+            <p>
+              La aplicacion queda protegida por una credencial de acceso separada para cada entorno, sin alterar tus
+              datos de negocio.
+            </p>
+          </div>
+
+          <div className="auth-form">
+            <div className="field">
+              <label htmlFor="login-username">Usuario</label>
+              <input
+                id="login-username"
+                className="auth-input"
+                type="text"
+                autoComplete="username"
+                value={loginUsername}
+                onChange={(event) => setLoginUsername(event.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="login-password">Contrasena</label>
+              <input
+                id="login-password"
+                className="auth-input"
+                type="password"
+                autoComplete="current-password"
+                value={loginPassword}
+                onChange={(event) => setLoginPassword(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    void handleLogin();
+                  }
+                }}
+              />
+            </div>
+
+            {loginError ? <Message severity="error" text={loginError} className="page-message" /> : null}
+
+            <Button label="Entrar" onClick={() => void handleLogin()} loading={loggingIn} />
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <section className="hero">
@@ -152,6 +299,11 @@ export const App = () => {
             onClick={openYearDialog}
             disabled={addablePastYears.length === 0}
           />
+
+          <div className="hero__session">
+            <span>Sesion iniciada como {session.username}</span>
+            <Button text label="Cerrar sesion" onClick={() => void handleLogout()} />
+          </div>
 
           <div className="hero__stats">
             <article>

@@ -44,6 +44,8 @@ Cada entorno usa:
 
 Esto permite que desarrollo y produccion tengan datos distintos y no se pisen entre si.
 
+Ademas, cada entorno puede usar su propio usuario, hash de contrasena y secreto de sesion.
+
 Plantillas disponibles:
 
 - `.env.development.example`
@@ -59,7 +61,42 @@ Entorno de desarrollo:
 cp .env.development.example .env.development.local
 ```
 
-2. Levantar el entorno local:
+2. Generar usuario, hash y secreto de sesion:
+
+```bash
+node scripts/generate-auth-credentials.mjs sergio "TuContrasenaSegura"
+```
+
+3. Pegar la salida en `.env.development.local`.
+
+Contenido recomendado:
+
+```env
+APP_ENV=development
+NODE_ENV=development
+COMPOSE_PROJECT_NAME=presupuesto-dev
+POSTGRES_DB=presupuesto_familiar_dev
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_PORT=5442
+API_PORT=3201
+WEB_PORT=3200
+WEB_PUBLIC_URL=http://localhost:3200
+RATE_LIMIT_MAX=300
+AUTH_USERNAME=sergio
+AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
+SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
+SESSION_TTL_HOURS=12
+SONARQUBE_PORT=9000
+SONARQUBE_ADMIN_PASSWORD=SonarLocal123!
+SONARQUBE_TOKEN_NAME=presupuesto-development-scan
+SONARQUBE_DB=sonarqube_dev
+SONARQUBE_DB_USER=sonarqube
+SONARQUBE_DB_PASSWORD=sonarqube
+VITE_DEV_API_TARGET=http://localhost:3001
+```
+
+4. Levantar el entorno local:
 
 ```bash
 npm run env:dev:up
@@ -71,6 +108,8 @@ La aplicacion quedara disponible en:
 - API: `http://localhost:3201/api`
 
 Cuando ejecutes el frontend con `vite`, la aplicacion usara `/api` por defecto y el proxy de desarrollo reenviara esas peticiones a `http://localhost:3001`.
+
+El login de desarrollo debe vivir en tu archivo local `.env.development.local`, que esta ignorado por Git.
 
 Comandos utiles:
 
@@ -84,6 +123,27 @@ Entorno de produccion local:
 ```bash
 cp .env.production.example .env.production.local
 npm run env:prod:up
+```
+
+Contenido recomendado para una simulacion local de produccion:
+
+```env
+APP_ENV=production
+NODE_ENV=production
+COMPOSE_PROJECT_NAME=presupuesto-prod
+POSTGRES_DB=presupuesto_familiar_prod
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=CAMBIA_ESTA_PASSWORD_LARGA
+API_PORT=3001
+WEB_PORT=3000
+WEB_PUBLIC_URL=https://presupuestofamiliar.rodriguezgalvan.es
+RATE_LIMIT_MAX=300
+AUTH_USERNAME=admin
+AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
+SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
+SESSION_TTL_HOURS=12
+BACKUP_BEFORE_DEPLOY=true
+BACKUP_RETENTION_DAYS=14
 ```
 
 La aplicacion quedara disponible en:
@@ -152,4 +212,33 @@ Tests:
 
 ```bash
 npm test
+```
+
+## Credenciales seguras por entorno
+
+La autenticacion usa estas variables:
+
+- `AUTH_USERNAME`
+- `AUTH_PASSWORD_HASH`
+- `SESSION_SECRET`
+- `SESSION_TTL_HOURS`
+
+Para generar un hash nuevo y un secreto de sesion:
+
+```bash
+node scripts/generate-auth-credentials.mjs admin "TuContrasenaSegura"
+```
+
+Estrategia recomendada:
+
+- `*.example`: solo placeholders, nunca credenciales reales.
+- `.env.development.local`: secretos de desarrollo en tu maquina, fuera de Git.
+- `.env.production`: secretos de produccion solo en el VPS.
+- GitHub Secrets: solo secretos de infraestructura y despliegue.
+
+Comprobaciones utiles:
+
+```bash
+git check-ignore -v .env.development.local
+git check-ignore -v .env.production.local
 ```

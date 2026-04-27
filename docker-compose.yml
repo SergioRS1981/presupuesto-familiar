@@ -35,6 +35,10 @@ services:
       API_PREFIX: /api
       CORS_ORIGIN: ${WEB_PUBLIC_URL:-http://localhost:3000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      AUTH_USERNAME: ${AUTH_USERNAME:?AUTH_USERNAME is required}
+      AUTH_PASSWORD_HASH: ${AUTH_PASSWORD_HASH:?AUTH_PASSWORD_HASH is required}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-presupuesto_familiar}?schema=public
     ports:
       - "${API_PORT:-3001}:3001"

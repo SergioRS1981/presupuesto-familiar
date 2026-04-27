@@ -1,6 +1,11 @@
 export type BudgetKind = "INCOME" | "EXPENSE";
 export type BudgetNature = "FIXED" | "VARIABLE";
 
+export type AuthSession = {
+  authenticated: boolean;
+  username?: string;
+};
+
 export type ConfiguredYear = {
   year: number;
 };

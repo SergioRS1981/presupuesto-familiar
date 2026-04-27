@@ -7,6 +7,9 @@ const currentYear = new Date().getFullYear();
 
 const { apiMock } = vi.hoisted(() => ({
   apiMock: {
+    getSession: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
     getCategories: vi.fn(),
     getBudgets: vi.fn(),
     getConsumptions: vi.fn(),
@@ -95,6 +98,9 @@ vi.mock("./features/reports/ReportsDashboard", () => ({
 
 describe("App", () => {
   beforeEach(() => {
+    apiMock.getSession.mockResolvedValue({ authenticated: true, username: "sergio" });
+    apiMock.login.mockResolvedValue({ authenticated: true, username: "sergio" });
+    apiMock.logout.mockResolvedValue(undefined);
     apiMock.getCategories.mockResolvedValue([]);
     apiMock.getBudgets.mockResolvedValue([]);
     apiMock.getConsumptions.mockResolvedValue([]);
@@ -149,5 +155,28 @@ describe("App", () => {
     await waitFor(() => expect(apiMock.createYear).toHaveBeenCalledWith({ year: currentYear - 1 }));
     await waitFor(() => expect(apiMock.getBudgets).toHaveBeenCalledWith(currentYear - 1));
     expect(screen.getByText(`Presupuestos ${currentYear - 1}`)).toBeInTheDocument();
+  });
+
+  it("muestra el formulario de acceso y autentica al usuario", async () => {
+    apiMock.getSession.mockResolvedValue({ authenticated: false });
+
+    const user = userEvent.setup();
+    const { App } = await import("./App");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: /inicia sesion/i })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Usuario"), "sergio");
+    await user.type(screen.getByLabelText("Contrasena"), "Presupuesto.Dev.2026!");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() =>
+      expect(apiMock.login).toHaveBeenCalledWith({
+        username: "sergio",
+        password: "Presupuesto.Dev.2026!"
+      })
+    );
+    await waitFor(() => expect(apiMock.getYears).toHaveBeenCalled());
   });
 });

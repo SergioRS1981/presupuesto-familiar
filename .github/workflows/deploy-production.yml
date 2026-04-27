@@ -61,10 +61,13 @@ jobs:
           script: |
             set -eu
             mkdir -p "$VPS_APP_PATH"
-            cat > "$VPS_APP_PATH/.env.production" <<'EOF'
-            ${{ secrets.PROD_ENV_FILE }}
-            EOF
-            printf '\nAPI_IMAGE=%s\nWEB_IMAGE=%s\n' "$API_IMAGE" "$WEB_IMAGE" >> "$VPS_APP_PATH/.env.production"
+            if [ ! -f "$VPS_APP_PATH/.env.production" ]; then
+              echo "Falta $VPS_APP_PATH/.env.production en el VPS. Crea ese archivo manualmente con los secretos de produccion antes de desplegar."
+              exit 1
+            fi
+            cp "$VPS_APP_PATH/.env.production" "$VPS_APP_PATH/.env.production.release"
+            trap 'rm -f "$VPS_APP_PATH/.env.production.release"' EXIT
+            printf '\nAPI_IMAGE=%s\nWEB_IMAGE=%s\n' "$API_IMAGE" "$WEB_IMAGE" >> "$VPS_APP_PATH/.env.production.release"
             chmod +x "$VPS_APP_PATH/scripts/deploy/vps-deploy.sh" "$VPS_APP_PATH/scripts/deploy/vps-backup.sh"
             cd "$VPS_APP_PATH"
-            REGISTRY=ghcr.io sh ./scripts/deploy/vps-deploy.sh ./.env.production
+            REGISTRY=ghcr.io sh ./scripts/deploy/vps-deploy.sh ./.env.production.release
