@@ -114,10 +114,14 @@ Ejemplo de `VPS_APP_PATH`:
 
 ### Para que el VPS pueda descargar imagenes del registry
 
+Si las imagenes de GHCR son publicas, no necesitas ningun secret adicional de registry.
+
+Solo si algun dia vuelves a hacer privadas las imagenes, podrias usar:
+
 - `REGISTRY_USERNAME`
 - `REGISTRY_PASSWORD`
 
-Si usas GHCR privado, lo normal es un usuario GitHub y un token con permiso de lectura de paquetes.
+En ese caso, lo normal es un usuario GitHub y un token con permiso de lectura de paquetes.
 
 ### Para el entorno de produccion
 
@@ -128,6 +132,7 @@ Estrategia recomendada:
 - el archivo `.env.production` vive solo en el VPS
 - GitHub Actions solo copia los artefactos de despliegue y decide `API_IMAGE` y `WEB_IMAGE`
 - el workflow genera un archivo temporal `.env.production.release` en el servidor y lo elimina al terminar
+- para repositorio e imagenes publicas, el despliegue no necesita login a GHCR
 
 Contenido minimo recomendado en el VPS:
 
@@ -228,7 +233,7 @@ Debes configurar estos puntos en la interfaz de GitHub:
 
 - crear el environment `production`
 - marcar `required reviewers` si quieres aprobacion humana antes de desplegar
-- cargar ahi los secretos de despliegue
+- cargar ahi los secretos de despliegue del VPS
 
 Esta parte no puedo dejarla hecha desde local porque depende de tu repositorio remoto y de la configuracion web de GitHub.
 

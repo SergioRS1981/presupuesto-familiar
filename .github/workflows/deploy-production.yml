@@ -49,15 +49,13 @@ jobs:
         env:
           API_IMAGE: ${{ steps.image-vars.outputs.api_image }}
           WEB_IMAGE: ${{ steps.image-vars.outputs.web_image }}
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
           VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT != '' && secrets.VPS_PORT || 22 }}
-          envs: API_IMAGE,WEB_IMAGE,REGISTRY_USERNAME,REGISTRY_PASSWORD,VPS_APP_PATH
+          envs: API_IMAGE,WEB_IMAGE,VPS_APP_PATH
           script: |
             set -eu
             mkdir -p "$VPS_APP_PATH"
