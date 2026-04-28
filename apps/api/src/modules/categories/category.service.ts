@@ -1,6 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import { HttpError } from "../../lib/http";
 import { z } from "zod";
+import { ensureCategoryBudgetMatrix } from "../budgets/budget-provision.service";
 import { categoryPayloadSchema } from "./category.schemas";
 
 type CategoryPayload = z.infer<typeof categoryPayloadSchema>;
@@ -12,9 +13,13 @@ export const listCategories = async () => {
 };
 
 export const createCategory = async (payload: CategoryPayload) => {
-  return prisma.budgetCategory.create({
+  const category = await prisma.budgetCategory.create({
     data: payload
   });
+
+  await ensureCategoryBudgetMatrix(category.id);
+
+  return category;
 };
 
 export const updateCategory = async (id: string, payload: CategoryPayload) => {

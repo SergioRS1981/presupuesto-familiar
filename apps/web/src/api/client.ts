@@ -65,7 +65,9 @@ export const api = {
     request<Consumption>("/consumptions", { method: "POST", body: payload }),
   deleteConsumption: (id: string) => request<void>(`/consumptions/${id}`, { method: "DELETE" }),
 
-  getYears: () => request<number[]>("/reports/years"),
+  getYears: () => request<ConfiguredYear[]>("/reports/years"),
   createYear: (payload: { year: number }) => request<ConfiguredYear>("/reports/years", { method: "POST", body: payload }),
+  updateYearStatus: (year: number, payload: { active: boolean }) =>
+    request<ConfiguredYear>(`/reports/years/${year}`, { method: "PUT", body: payload }),
   getAnnualReport: (year: number) => request<Report>(`/reports/annual?year=${year}`)
 };

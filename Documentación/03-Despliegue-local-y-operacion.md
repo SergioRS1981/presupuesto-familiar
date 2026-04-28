@@ -46,6 +46,13 @@ Cada entorno queda aislado por tres mecanismos:
 
 Con ello, un desarrollo puede trabajar con datos de prueba mientras produccion mantiene sus propios datos persistidos.
 
+Ademas, la API mantiene una estructura comun de partidas entre ejercicios:
+
+- al crear un ano nuevo, genera presupuestos vacios para todas las partidas existentes
+- al crear una partida nueva, la propaga a todos los anos ya detectados
+- los anos pueden activarse o desactivarse sin eliminar sus presupuestos ni consumos
+- los informes futuros pueden comparar anos sobre una base homogenea sin rehacer categorias
+
 ## Arranque de desarrollo
 
 Flujo recomendado:

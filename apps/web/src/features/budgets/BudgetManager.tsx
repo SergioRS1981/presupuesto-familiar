@@ -11,7 +11,7 @@ import { InputText } from "primereact/inputtext";
 import { Tag } from "primereact/tag";
 import { api } from "../../api/client";
 import { Budget, Category } from "../../api/types";
-import { formatCurrency, formatKind, formatNature } from "../../utils/format";
+import { formatCurrency, formatKind, formatNature, formatPercentage } from "../../utils/format";
 import { ExcelTransferActions } from "../imports/ExcelTransferActions";
 import {
   downloadBudgetTemplateWorkbook,
@@ -32,6 +32,7 @@ type BudgetRow = {
   id: string;
   category: Category;
   plannedAmount: number;
+  shareOfKindTotal: number;
   budgetId?: string;
   onEdit: () => void;
   onDelete?: () => void;
@@ -93,6 +94,8 @@ const renderBudgetKind = (row: BudgetRow) => formatKind(row.category.kind);
 const renderBudgetNature = (row: BudgetRow) => formatNature(row.category.nature);
 
 const renderBudgetAmount = (row: BudgetRow) => formatCurrency(row.plannedAmount);
+
+const renderBudgetShare = (row: BudgetRow) => formatPercentage(row.shareOfKindTotal);
 
 const renderBudgetActions = (row: BudgetRow) => (
   <div className="table-actions">
@@ -293,23 +296,39 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
   );
 
   const budgetRows = useMemo<BudgetRow[]>(
-    () =>
-      categories.map((category) => {
+    () => {
+      const totalByKind = categories.reduce<Record<"INCOME" | "EXPENSE", number>>(
+        (accumulator, category) => {
+          const budget = budgets.find((item) => item.categoryId === category.id);
+          accumulator[category.kind] += Number(budget?.plannedAmount ?? 0);
+          return accumulator;
+        },
+        {
+          INCOME: 0,
+          EXPENSE: 0
+        }
+      );
+
+      return categories.map((category) => {
         const budget = budgets.find((item) => item.categoryId === category.id);
+        const plannedAmount = Number(budget?.plannedAmount ?? 0);
+        const kindTotal = totalByKind[category.kind];
 
         return {
           id: category.id,
           budgetId: budget?.id,
           category,
-          plannedAmount: Number(budget?.plannedAmount ?? 0),
-          onEdit: () => openBudgetDialog(category.id, Number(budget?.plannedAmount ?? 0)),
+          plannedAmount,
+          shareOfKindTotal: kindTotal === 0 ? 0 : plannedAmount / kindTotal,
+          onEdit: () => openBudgetDialog(category.id, plannedAmount),
           onDelete: budget
             ? () => {
                 void handleDeleteBudget(budget.id);
               }
             : undefined
         };
-      }),
+      });
+    },
     [budgets, categories]
   );
 
@@ -384,6 +403,12 @@ export const BudgetManager = ({ year, categories, budgets, onReload }: BudgetMan
             <Column field="category.kind" header="Tipo" body={renderBudgetKind} />
             <Column field="category.nature" header="Naturaleza" body={renderBudgetNature} />
             <Column field="plannedAmount" header="Importe previsto" body={renderBudgetAmount} className="text-right" />
+            <Column
+              field="shareOfKindTotal"
+              header="% sobre ingresos o gastos"
+              body={renderBudgetShare}
+              className="text-right"
+            />
             <Column header="Acciones" body={renderBudgetActions} />
           </DataTable>
         </Card>

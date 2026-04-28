@@ -4,9 +4,10 @@ import { ProgressSpinner } from "primereact/progressspinner";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Dropdown, DropdownChangeEvent } from "primereact/dropdown";
+import { InputSwitch, InputSwitchChangeEvent } from "primereact/inputswitch";
 import { TabPanel, TabView } from "primereact/tabview";
 import { api, UnauthorizedError } from "./api/client";
-import { AuthSession, Budget, Category, Consumption, Report } from "./api/types";
+import { AuthSession, Budget, Category, ConfiguredYear, Consumption, Report } from "./api/types";
 import { BudgetManager } from "./features/budgets/BudgetManager";
 import { ConsumptionManager } from "./features/consumptions/ConsumptionManager";
 import { ReportsDashboard } from "./features/reports/ReportsDashboard";
@@ -16,7 +17,7 @@ const currentYear = new Date().getFullYear();
 
 export const App = () => {
   const [year, setYear] = useState(currentYear);
-  const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
+  const [availableYears, setAvailableYears] = useState<ConfiguredYear[]>([{ year: currentYear, active: true }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [consumptions, setConsumptions] = useState<Consumption[]>([]);
@@ -29,6 +30,7 @@ export const App = () => {
   const [yearDialogVisible, setYearDialogVisible] = useState(false);
   const [yearToCreate, setYearToCreate] = useState<number | null>(null);
   const [creatingYear, setCreatingYear] = useState(false);
+  const [updatingYearStatus, setUpdatingYearStatus] = useState<number | null>(null);
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
@@ -38,7 +40,7 @@ export const App = () => {
     setBudgets([]);
     setConsumptions([]);
     setReport(null);
-    setAvailableYears([currentYear]);
+    setAvailableYears([{ year: currentYear, active: true }]);
     setYear(currentYear);
   };
 
@@ -52,8 +54,13 @@ export const App = () => {
     };
   }, [budgets, consumptions]);
 
+  const activeYears = useMemo(
+    () => availableYears.filter((configuredYear) => configuredYear.active).map((configuredYear) => configuredYear.year),
+    [availableYears]
+  );
+
   const addablePastYears = useMemo(() => {
-    const registeredYears = new Set(availableYears);
+    const registeredYears = new Set(availableYears.map((configuredYear) => configuredYear.year));
     const years: number[] = [];
 
     for (let value = currentYear - 1; value >= 2000; value -= 1) {
@@ -70,21 +77,35 @@ export const App = () => {
     setError(null);
 
     try {
-      const [loadedCategories, loadedBudgets, loadedConsumptions, loadedYears, loadedReport] = await Promise.all([
+      const [loadedCategories, loadedYears] = await Promise.all([
         api.getCategories(),
-        api.getBudgets(selectedYear),
-        api.getConsumptions(selectedYear),
-        api.getYears(),
-        api.getAnnualReport(selectedYear)
+        api.getYears()
       ]);
-
-      const years = loadedYears.length > 0 ? loadedYears : [selectedYear];
+      const years = loadedYears.length > 0 ? loadedYears : [{ year: selectedYear, active: true }];
+      const activeLoadedYears = years.filter((configuredYear) => configuredYear.active);
+      const effectiveYear =
+        activeLoadedYears.find((configuredYear) => configuredYear.year === selectedYear)?.year ??
+        activeLoadedYears[0]?.year ??
+        years[0]?.year ??
+        selectedYear;
+      const [loadedBudgets, loadedConsumptions, loadedReport] = await Promise.all([
+        api.getBudgets(effectiveYear),
+        api.getConsumptions(effectiveYear),
+        api.getAnnualReport(effectiveYear)
+      ]);
 
       setCategories(loadedCategories);
       setBudgets(loadedBudgets);
       setConsumptions(loadedConsumptions);
-      setAvailableYears(Array.from(new Set([...years, selectedYear])).sort((left, right) => left - right));
+      setAvailableYears(
+        Array.from(new Map(years.map((configuredYear) => [configuredYear.year, configuredYear])).values()).sort(
+          (left, right) => left.year - right.year
+        )
+      );
       setReport(loadedReport);
+      if (effectiveYear !== selectedYear) {
+        setYear(effectiveYear);
+      }
     } catch (loadError) {
       if (loadError instanceof UnauthorizedError) {
         setSession(null);
@@ -145,11 +166,7 @@ export const App = () => {
   }, [addablePastYears]);
 
   const openYearDialog = () => {
-    if (addablePastYears.length === 0) {
-      return;
-    }
-
-    setYearToCreate(addablePastYears[0]);
+    setYearToCreate(addablePastYears[0] ?? null);
     setYearDialogVisible(true);
   };
 
@@ -165,7 +182,9 @@ export const App = () => {
       const createdYear = await api.createYear({ year: yearToCreate });
 
       setAvailableYears((current) =>
-        Array.from(new Set([...current, createdYear.year])).sort((left, right) => left - right)
+        Array.from(new Map([...current, createdYear].map((configuredYear) => [configuredYear.year, configuredYear])).values()).sort(
+          (left, right) => left.year - right.year
+        )
       );
       setYearDialogVisible(false);
       setYear(createdYear.year);
@@ -173,6 +192,35 @@ export const App = () => {
       setError(creationError instanceof Error ? creationError.message : "No se pudo crear el ano solicitado.");
     } finally {
       setCreatingYear(false);
+    }
+  };
+
+  const handleYearStatusChange = async (selectedYear: number, active: boolean) => {
+    setUpdatingYearStatus(selectedYear);
+    setError(null);
+
+    try {
+      const updatedYear = await api.updateYearStatus(selectedYear, { active });
+
+      setAvailableYears((current) =>
+        current
+          .map((configuredYear) => (configuredYear.year === updatedYear.year ? updatedYear : configuredYear))
+          .sort((left, right) => left.year - right.year)
+      );
+
+      if (!active && year === selectedYear) {
+        const nextActiveYear = availableYears.find(
+          (configuredYear) => configuredYear.year !== selectedYear && configuredYear.active
+        )?.year;
+
+        if (nextActiveYear) {
+          setYear(nextActiveYear);
+        }
+      }
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : "No se pudo actualizar el estado del ano.");
+    } finally {
+      setUpdatingYearStatus(null);
     }
   };
 
@@ -296,17 +344,16 @@ export const App = () => {
             <Dropdown
               id="year-selector"
               value={year}
-              options={availableYears.map((value) => ({ label: value.toString(), value }))}
+              options={activeYears.map((value) => ({ label: value.toString(), value }))}
               onChange={(event: DropdownChangeEvent) => setYear(event.value)}
             />
           </div>
 
           <Button
             icon="pi pi-history"
-            label="Anadir ano pasado"
+            label="Gestionar anos"
             outlined
             onClick={openYearDialog}
-            disabled={addablePastYears.length === 0}
           />
 
           <div className="hero__session">
@@ -331,14 +378,13 @@ export const App = () => {
       {error ? <Message severity="error" text={error} className="page-message" /> : null}
 
       <Dialog
-        header="Crear ano historico"
+        header="Gestion de anos"
         visible={yearDialogVisible}
-        style={{ width: "28rem" }}
+        style={{ width: "32rem" }}
         onHide={() => setYearDialogVisible(false)}
         footer={
           <div className="dialog-actions">
             <Button text label="Cancelar" onClick={() => setYearDialogVisible(false)} />
-            <Button label="Crear ano" loading={creatingYear} onClick={handleCreateYear} />
           </div>
         }
       >
@@ -353,10 +399,41 @@ export const App = () => {
               placeholder="Selecciona un ano"
             />
           </div>
+          <Button
+            label="Anadir ano pasado"
+            loading={creatingYear}
+            onClick={() => void handleCreateYear()}
+            disabled={yearToCreate === null}
+          />
           <p className="m-0">
             Al crear el ano podras cargar presupuestos y consumos reales para ese ejercicio aunque todavia no tenga
-            datos.
+            datos. Las partidas presupuestarias se comparten automaticamente con el resto de anos.
           </p>
+          <div className="field">
+            <label>Anos disponibles</label>
+            <div className="flex flex-column gap-3">
+              {availableYears.map((configuredYear) => {
+                const disableDeactivation = configuredYear.active && activeYears.length === 1;
+
+                return (
+                  <div key={configuredYear.year} className="flex align-items-center justify-content-between gap-3">
+                    <div className="flex flex-column">
+                      <strong>{configuredYear.year}</strong>
+                      <small>{configuredYear.active ? "Activo en la navegacion" : "Oculto del selector de anos"}</small>
+                    </div>
+                    <InputSwitch
+                      inputId={`year-active-${configuredYear.year}`}
+                      checked={configuredYear.active}
+                      disabled={updatingYearStatus === configuredYear.year || disableDeactivation}
+                      onChange={(event: InputSwitchChangeEvent) =>
+                        void handleYearStatusChange(configuredYear.year, Boolean(event.value))
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </Dialog>
 
@@ -383,7 +460,7 @@ export const App = () => {
               report={report}
               budgets={budgets}
               consumptions={consumptions}
-              availableYears={availableYears}
+              availableYears={activeYears}
               onError={setError}
             />
           </TabPanel>

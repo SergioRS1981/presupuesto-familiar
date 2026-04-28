@@ -87,10 +87,17 @@ Su funcion es permitir que un ejercicio aparezca en el selector aunque todavia n
 Campo clave:
 
 - `year`
+- `active`
+
+Regla funcional:
+
+- un ano inactivo conserva sus datos pero no aparece en la navegacion principal
 
 ### `BudgetCategory`
 
 Representa una partida presupuestaria.
+
+La categoria es global y comun a todos los ejercicios. No se guarda una copia distinta por ano.
 
 Campos clave:
 
@@ -114,6 +121,8 @@ Restriccion importante:
 
 - combinacion unica `year + categoryId`
 - al guardar un presupuesto se asegura tambien la existencia del ano configurado
+- al crear un ano o consultar sus presupuestos, el sistema completa automaticamente las partidas que falten con importe `0`
+- al crear una partida nueva, el sistema genera tambien su presupuesto vacio en todos los anos ya conocidos
 
 ### `MonthlyConsumption`
 

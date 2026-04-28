@@ -17,9 +17,12 @@ La documentacion tecnica ampliada se encuentra en:
 ## Funcionalidades
 
 - Gestion de partidas presupuestarias de ingreso y gasto.
+- Partidas presupuestarias comunes a todos los anos para mantener una estructura comparable entre ejercicios.
 - Clasificacion por partidas fijas y variables.
 - Alta de anos pasados para preparar ejercicios historicos aunque aun no tengan datos.
+- Activacion y desactivacion de anos para decidir que ejercicios aparecen en la navegacion.
 - Configuracion del presupuesto anual previsto por partida.
+- Visualizacion del peso porcentual de cada partida dentro del total de ingresos o gastos del ano.
 - Registro del consumo real por mes y por ano.
 - Importacion masiva por Excel de partidas, presupuestos previstos y consumos reales.
 - Descarga de plantillas Excel de ejemplo para cada flujo de importacion.
@@ -47,6 +50,13 @@ Esto permite que desarrollo y produccion tengan datos distintos y no se pisen en
 Ademas, cada entorno puede usar su propio usuario, hash de contrasena y secreto de sesion.
 
 La sesion dura una semana por defecto y el frontend ofrece una opcion manual para cerrar sesion cuando el usuario lo necesite.
+
+Regla importante de negocio:
+
+- al crear un ano nuevo, la API inicializa automaticamente presupuestos vacios para todas las partidas existentes
+- al crear una partida nueva, la API la propaga al resto de anos conocidos con importe anual `0`
+- cada ano puede activarse o desactivarse sin perder sus datos, y el selector solo muestra los anos activos
+- con ello, los ejercicios comparten una misma malla de partidas y quedan listos para comparativas futuras
 
 Plantillas disponibles:
 

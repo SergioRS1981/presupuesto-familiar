@@ -15,7 +15,8 @@ const { apiMock } = vi.hoisted(() => ({
     getConsumptions: vi.fn(),
     getYears: vi.fn(),
     getAnnualReport: vi.fn(),
-    createYear: vi.fn()
+    createYear: vi.fn(),
+    updateYearStatus: vi.fn()
   }
 }));
 
@@ -74,6 +75,19 @@ vi.mock("primereact/dropdown", () => ({
   )
 }));
 
+vi.mock("primereact/inputswitch", () => ({
+  InputSwitch: ({ inputId, checked, disabled, onChange }: any) => (
+    <input
+      id={inputId}
+      aria-label={inputId}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      onChange={(event: ChangeEvent<HTMLInputElement>) => onChange({ value: event.target.checked })}
+    />
+  )
+}));
+
 vi.mock("primereact/tabview", () => ({
   TabView: ({ children }: any) => <div>{children}</div>,
   TabPanel: ({ header, children }: any) => (
@@ -98,13 +112,15 @@ vi.mock("./features/reports/ReportsDashboard", () => ({
 
 describe("App", () => {
   beforeEach(() => {
+    const yearsState = [{ year: currentYear, active: true }];
+
     apiMock.getSession.mockResolvedValue({ authenticated: true, username: "sergio" });
     apiMock.login.mockResolvedValue({ authenticated: true, username: "sergio" });
     apiMock.logout.mockResolvedValue(undefined);
     apiMock.getCategories.mockResolvedValue([]);
     apiMock.getBudgets.mockResolvedValue([]);
     apiMock.getConsumptions.mockResolvedValue([]);
-    apiMock.getYears.mockResolvedValue([currentYear]);
+    apiMock.getYears.mockImplementation(async () => yearsState);
     apiMock.getAnnualReport.mockResolvedValue({
       year: currentYear,
       planned: {
@@ -134,7 +150,15 @@ describe("App", () => {
         balance: 0
       }))
     });
-    apiMock.createYear.mockResolvedValue({ year: currentYear - 1 });
+    apiMock.createYear.mockImplementation(async ({ year }: { year: number }) => {
+      const createdYear = { year, active: true };
+      yearsState.push(createdYear);
+      return createdYear;
+    });
+    apiMock.updateYearStatus.mockImplementation(async (year: number, payload: { active: boolean }) => ({
+      year,
+      active: payload.active
+    }));
   });
 
   it("permite crear un ano pasado y cambiar el contexto de trabajo a ese ejercicio", async () => {
@@ -145,16 +169,35 @@ describe("App", () => {
 
     await waitFor(() => expect(apiMock.getYears).toHaveBeenCalled());
 
-    await user.click(screen.getByRole("button", { name: "Anadir ano pasado" }));
+    await user.click(screen.getByRole("button", { name: "Gestionar anos" }));
 
-    expect(screen.getByRole("dialog", { name: "Crear ano historico" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Gestion de anos" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("year-create-selector"), { target: { value: String(currentYear - 1) } });
-    await user.click(screen.getByRole("button", { name: "Crear ano" }));
+    await user.click(screen.getByRole("button", { name: "Anadir ano pasado" }));
 
     await waitFor(() => expect(apiMock.createYear).toHaveBeenCalledWith({ year: currentYear - 1 }));
     await waitFor(() => expect(apiMock.getBudgets).toHaveBeenCalledWith(currentYear - 1));
     expect(screen.getByText(`Presupuestos ${currentYear - 1}`)).toBeInTheDocument();
+  });
+
+  it("permite activar y desactivar anos y navega solo entre anos activos", async () => {
+    apiMock.getYears.mockResolvedValue([
+      { year: currentYear - 1, active: true },
+      { year: currentYear, active: true }
+    ]);
+
+    const user = userEvent.setup();
+    const { App } = await import("./App");
+
+    render(<App />);
+
+    await waitFor(() => expect(apiMock.getYears).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Gestionar anos" }));
+    await user.click(screen.getByLabelText(`year-active-${currentYear}`));
+
+    await waitFor(() => expect(apiMock.updateYearStatus).toHaveBeenCalledWith(currentYear, { active: false }));
+    await waitFor(() => expect(screen.getByText(`Presupuestos ${currentYear - 1}`)).toBeInTheDocument());
   });
 
   it("muestra el formulario de acceso y autentica al usuario", async () => {

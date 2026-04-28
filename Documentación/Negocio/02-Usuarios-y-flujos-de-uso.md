@@ -104,7 +104,8 @@ Si se quiere enseñar el producto a negocio:
 3. ensenar la gestion de partidas
 4. ensenar la descarga de plantillas Excel y la importacion masiva
 5. ensenar el presupuesto previsto por partida
-6. ensenar el registro de consumos
-7. terminar en informes
+6. destacar el porcentaje que representa cada partida frente al total de ingresos o gastos del ano
+7. ensenar el registro de consumos
+8. terminar en informes
 
 Este orden ayuda a entender bien de donde salen los datos del informe resumido.

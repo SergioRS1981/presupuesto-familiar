@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { asyncHandler, validateBody, validateQuery } from "../../lib/http";
-import { reportQuerySchema, yearPayloadSchema } from "./report.schemas";
-import { createAvailableYear, getAnnualReport, getAvailableYears } from "./report.service";
+import { z } from "zod";
+import { reportQuerySchema, yearActivationPayloadSchema, yearPayloadSchema } from "./report.schemas";
+import { createAvailableYear, getAnnualReport, getAvailableYears, updateAvailableYearStatus } from "./report.service";
 
 export const reportRouter = Router();
 
@@ -28,5 +29,14 @@ reportRouter.post(
   asyncHandler(async (req, res) => {
     const configuredYear = await createAvailableYear(req.body.year);
     res.status(201).json(configuredYear);
+  })
+);
+
+reportRouter.put(
+  "/years/:year",
+  validateBody(yearActivationPayloadSchema),
+  asyncHandler(async (req, res) => {
+    const configuredYear = await updateAvailableYearStatus(z.coerce.number().int().parse(req.params.year), req.body.active);
+    res.json(configuredYear);
   })
 );

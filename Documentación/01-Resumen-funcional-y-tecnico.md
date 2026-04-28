@@ -18,6 +18,7 @@ Sobre esos datos, la aplicacion genera un informe resumido que compara lo previs
   - naturaleza: `FIXED` o `VARIABLE`
 - Activacion o desactivacion de partidas.
 - Configuracion del importe anual previsto por partida y ano.
+- Visualizacion del porcentaje que supone cada partida dentro del total de ingresos o gastos del ano.
 - Registro del consumo real mensual por partida y ano.
 - Alta manual de anos historicos para trabajar sobre ejercicios pasados vacios y completarlos despues.
 - Importacion masiva en Excel de:

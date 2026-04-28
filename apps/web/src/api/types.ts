@@ -8,6 +8,7 @@ export type AuthSession = {
 
 export type ConfiguredYear = {
   year: number;
+  active: boolean;
 };
 
 export type Category = {

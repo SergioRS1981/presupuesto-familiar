@@ -7,13 +7,17 @@
 - un ano puede existir en la aplicacion aunque todavia no tenga datos
 - el alta manual de anos se usa para trabajar con ejercicios historicos
 - al registrar presupuesto o consumo para un ano, el sistema asegura su disponibilidad posterior en el selector
+- al crear o detectar un ano, el sistema inicializa presupuestos vacios para todas las partidas existentes
+- un ano puede marcarse como activo o inactivo sin perder sus datos historicos
 
 ### Partidas presupuestarias
 
 - una partida representa una categoria economica del hogar
+- una partida es global y comun a todos los anos
 - una partida tiene tipo `ingreso` o `gasto`
 - una partida tiene naturaleza `fija` o `variable`
 - una partida puede estar activa o inactiva
+- al crear una partida nueva, el sistema la replica con presupuesto anual `0` en todos los anos conocidos
 
 ### Presupuesto anual
 
@@ -71,6 +75,14 @@ Resta entre presupuesto previsto y real acumulado.
 ### Balance
 
 Diferencia entre ingresos y gastos.
+
+### Ano activo
+
+Ejercicio que aparece en el selector principal y por el que el usuario puede navegar desde la aplicacion.
+
+### Ano inactivo
+
+Ejercicio oculto en la navegacion principal. Conserva sus presupuestos, consumos e informes historicos y puede reactivarse mas adelante.
 
 ### Linealizado
 

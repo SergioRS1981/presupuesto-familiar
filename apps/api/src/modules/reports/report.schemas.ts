@@ -9,3 +9,7 @@ export const reportQuerySchema = z.object({
 export const yearPayloadSchema = z.object({
   year: z.coerce.number().int().min(2000).max(currentYear)
 });
+
+export const yearActivationPayloadSchema = z.object({
+  active: z.boolean()
+});

@@ -1,12 +1,15 @@
 import { prisma } from "../../lib/prisma";
 import { HttpError } from "../../lib/http";
 import { z } from "zod";
+import { ensureYearBudgetMatrix } from "./budget-provision.service";
 import { budgetPayloadSchema } from "./budget.schemas";
 import { ensureYearExists } from "../reports/report.service";
 
 type BudgetPayload = z.infer<typeof budgetPayloadSchema>;
 
 export const listBudgetsByYear = async (year: number) => {
+  await ensureYearBudgetMatrix(year);
+
   return prisma.annualBudget.findMany({
     where: { year },
     include: { category: true },
