@@ -10,10 +10,13 @@ describe("auth helpers", () => {
   });
 
   it("firma y valida tokens de sesion", () => {
-    const token = createSessionToken("sergio", "0123456789abcdef0123456789abcdef", 12);
+    const ttlHours = 168;
+    const beforeNow = Math.floor(Date.now() / 1000);
+    const token = createSessionToken("sergio", "0123456789abcdef0123456789abcdef", ttlHours);
     const payload = readSessionToken(token, "0123456789abcdef0123456789abcdef");
 
     expect(payload?.sub).toBe("sergio");
+    expect(payload?.exp).toBeGreaterThanOrEqual(beforeNow + ttlHours * 60 * 60 - 1);
     expect(readSessionToken(token, "secret-distinto")).toBeNull();
   });
 });

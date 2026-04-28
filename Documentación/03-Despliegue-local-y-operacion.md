@@ -75,6 +75,7 @@ URLs esperadas:
 - healthcheck API: `http://localhost:3201/health`
 
 El login de desarrollo debe definirse en tu `.env.development.local`, que queda fuera de Git por `.gitignore`.
+La sesion dura una semana y el frontend deja el cierre de sesion como una opcion manual dentro de las opciones de sesion.
 
 Contenido recomendado para `.env.development.local`:
 
@@ -93,7 +94,7 @@ RATE_LIMIT_MAX=300
 AUTH_USERNAME=sergio
 AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
 SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
-SESSION_TTL_HOURS=12
+SESSION_TTL_HOURS=168
 SONARQUBE_PORT=9000
 SONARQUBE_ADMIN_PASSWORD=SonarLocal123!
 SONARQUBE_TOKEN_NAME=presupuesto-development-scan
@@ -134,7 +135,7 @@ RATE_LIMIT_MAX=300
 AUTH_USERNAME=admin
 AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
 SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
-SESSION_TTL_HOURS=12
+SESSION_TTL_HOURS=168
 BACKUP_BEFORE_DEPLOY=true
 BACKUP_RETENTION_DAYS=14
 ```
@@ -200,6 +201,7 @@ Notas de desarrollo frontend:
 - Vite reenvia `/api` al backend local usando `proxy`
 - si necesitas cambiar el backend del proxy, configura `VITE_DEV_API_TARGET`
 - la autenticacion queda separada por entorno usando usuario, hash de contrasena y secreto de sesion propios
+- la sesion expira automaticamente a la semana si el usuario no vuelve a autenticarse
 - genera esos valores con `node scripts/generate-auth-credentials.mjs admin "TuContrasenaSegura"`
 - puedes verificar que Git ignora tus archivos locales con `git check-ignore -v .env.development.local .env.production.local`
 

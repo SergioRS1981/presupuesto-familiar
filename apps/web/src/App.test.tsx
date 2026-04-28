@@ -179,4 +179,18 @@ describe("App", () => {
     );
     await waitFor(() => expect(apiMock.getYears).toHaveBeenCalled());
   });
+
+  it("muestra el boton Desconectar en la cabecera y permite desloguearse", async () => {
+    const user = userEvent.setup();
+    const { App } = await import("./App");
+
+    render(<App />);
+
+    await waitFor(() => expect(apiMock.getYears).toHaveBeenCalled());
+    expect(screen.getByText(/una semana despues del login/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Desconectar" }));
+
+    await waitFor(() => expect(apiMock.logout).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument());
+  }, 10000);
 });

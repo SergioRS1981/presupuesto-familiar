@@ -46,6 +46,8 @@ Esto permite que desarrollo y produccion tengan datos distintos y no se pisen en
 
 Ademas, cada entorno puede usar su propio usuario, hash de contrasena y secreto de sesion.
 
+La sesion dura una semana por defecto y el frontend ofrece una opcion manual para cerrar sesion cuando el usuario lo necesite.
+
 Plantillas disponibles:
 
 - `.env.development.example`
@@ -86,7 +88,7 @@ RATE_LIMIT_MAX=300
 AUTH_USERNAME=sergio
 AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
 SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
-SESSION_TTL_HOURS=12
+SESSION_TTL_HOURS=168
 SONARQUBE_PORT=9000
 SONARQUBE_ADMIN_PASSWORD=SonarLocal123!
 SONARQUBE_TOKEN_NAME=presupuesto-development-scan
@@ -110,6 +112,7 @@ La aplicacion quedara disponible en:
 Cuando ejecutes el frontend con `vite`, la aplicacion usara `/api` por defecto y el proxy de desarrollo reenviara esas peticiones a `http://localhost:3001`.
 
 El login de desarrollo debe vivir en tu archivo local `.env.development.local`, que esta ignorado por Git.
+La sesion permanecera activa hasta una semana desde el login, salvo que el usuario cierre sesion manualmente desde el frontend.
 
 Comandos utiles:
 
@@ -141,7 +144,7 @@ RATE_LIMIT_MAX=300
 AUTH_USERNAME=admin
 AUTH_PASSWORD_HASH=scrypt:PEGA_AQUI_EL_HASH_GENERADO
 SESSION_SECRET=PEGA_AQUI_EL_SECRET_GENERADO
-SESSION_TTL_HOURS=12
+SESSION_TTL_HOURS=168
 BACKUP_BEFORE_DEPLOY=true
 BACKUP_RETENTION_DAYS=14
 ```

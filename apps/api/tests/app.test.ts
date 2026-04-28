@@ -11,7 +11,7 @@ process.env.AUTH_PASSWORD_HASH =
   "scrypt:RXLSLzN0vx7wqYTKvtMeng:yCQoZsTq-3Wa6a5ab7kmcECC-ZLTu6qcDgjW-pfa_JJmtz3owpdxngamhEwnio6HKYhCvNuZ1yZkjsZTBIAi3Q";
 process.env.SESSION_SECRET =
   process.env.SESSION_SECRET ?? "f063c9d732fc273208a2c42415c9e51f3b6e0c1e84a8c708e376a4bbe4398393";
-process.env.SESSION_TTL_HOURS = process.env.SESSION_TTL_HOURS ?? "12";
+process.env.SESSION_TTL_HOURS = process.env.SESSION_TTL_HOURS ?? "168";
 
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";

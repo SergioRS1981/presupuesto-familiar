@@ -14,7 +14,7 @@ const envSchema = z.object({
   AUTH_USERNAME: z.string().min(1),
   AUTH_PASSWORD_HASH: z.string().min(1),
   SESSION_SECRET: z.string().min(32),
-  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(12)
+  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(168)
 });
 
 export const env = envSchema.parse(process.env);

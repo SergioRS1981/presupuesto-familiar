@@ -271,6 +271,15 @@ export const App = () => {
 
   return (
     <main className="app-shell">
+      <header className="topbar">
+        <div className="topbar__brand">
+          <span className="hero__eyebrow">Presupuesto domestico anual</span>
+          <strong>Sesion activa como {session.username}</strong>
+        </div>
+
+        <Button text label="Desconectar" onClick={() => void handleLogout()} />
+      </header>
+
       <section className="hero">
         <div className="hero__copy">
           <span className="hero__eyebrow">Presupuesto domestico anual</span>
@@ -301,8 +310,7 @@ export const App = () => {
           />
 
           <div className="hero__session">
-            <span>Sesion iniciada como {session.username}</span>
-            <Button text label="Cerrar sesion" onClick={() => void handleLogout()} />
+            <span>La sesion caduca automaticamente una semana despues del login.</span>
           </div>
 
           <div className="hero__stats">

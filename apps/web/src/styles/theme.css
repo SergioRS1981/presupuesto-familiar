@@ -38,6 +38,27 @@ body {
   padding: 2rem 1.2rem 3rem;
 }
 
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--surface-border);
+  background: rgba(255, 252, 247, 0.82);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+.topbar__brand strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.95rem;
+  color: var(--brand-deep);
+}
+
 .auth-shell {
   min-height: 100vh;
   display: grid;
@@ -167,14 +188,19 @@ body {
 }
 
 .hero__session {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  display: block;
   padding: 0.85rem 1rem;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
   font-size: 0.9rem;
+}
+
+.hero__session small {
+  display: block;
+}
+
+.hero__session span {
+  color: rgba(248, 250, 252, 0.74);
 }
 
 .hero__stats article {
@@ -380,5 +406,14 @@ body {
 
   .app-shell {
     padding: 1rem 0.85rem 2rem;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero__stats {
+    grid-template-columns: 1fr;
   }
 }

@@ -39,12 +39,14 @@ SONAR_URL="http://localhost:${SONAR_PORT}"
 
 ADMIN_AUTH_CODE="$(curl -s -o /tmp/sonar-auth-response.txt -w '%{http_code}' \
   -u "admin:${SONAR_ADMIN_PASSWORD}" "$SONAR_URL/api/authentication/validate" || true)"
+ADMIN_AUTH_VALID="$(sed -n 's/.*"valid":\([^}]*\).*/\1/p' /tmp/sonar-auth-response.txt | tr -d '[:space:]')"
 
-if [ "$ADMIN_AUTH_CODE" != "200" ]; then
+if [ "$ADMIN_AUTH_CODE" != "200" ] || [ "$ADMIN_AUTH_VALID" != "true" ]; then
   DEFAULT_AUTH_CODE="$(curl -s -o /tmp/sonar-default-auth.txt -w '%{http_code}' \
     -u admin:admin "$SONAR_URL/api/authentication/validate" || true)"
+  DEFAULT_AUTH_VALID="$(sed -n 's/.*"valid":\([^}]*\).*/\1/p' /tmp/sonar-default-auth.txt | tr -d '[:space:]')"
 
-  if [ "$DEFAULT_AUTH_CODE" = "200" ]; then
+  if [ "$DEFAULT_AUTH_CODE" = "200" ] && [ "$DEFAULT_AUTH_VALID" = "true" ]; then
     curl -fsS -u admin:admin -X POST \
       "$SONAR_URL/api/users/change_password" \
       -d "login=admin" \
@@ -82,8 +84,9 @@ fi
 SONAR_TOKEN="$(cat "$TOKEN_FILE")"
 TOKEN_STATUS="$(curl -s -o /tmp/sonar-token-validate.txt -w '%{http_code}' -u "${SONAR_TOKEN}:" \
   "$SONAR_URL/api/authentication/validate" || true)"
+TOKEN_VALID="$(sed -n 's/.*"valid":\([^}]*\).*/\1/p' /tmp/sonar-token-validate.txt | tr -d '[:space:]')"
 
-if [ "$TOKEN_STATUS" != "200" ]; then
+if [ "$TOKEN_STATUS" != "200" ] || [ "$TOKEN_VALID" != "true" ]; then
   generate_token
   SONAR_TOKEN="$(cat "$TOKEN_FILE")"
 fi
