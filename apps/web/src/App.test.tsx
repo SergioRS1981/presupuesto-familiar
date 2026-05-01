@@ -1,4 +1,4 @@
-import type { ChangeEvent } from "react";
+import React, { type ChangeEvent } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -89,7 +89,22 @@ vi.mock("primereact/inputswitch", () => ({
 }));
 
 vi.mock("primereact/tabview", () => ({
-  TabView: ({ children }: any) => <div>{children}</div>,
+  TabView: ({ activeIndex = 0, children, onTabChange }: any) => {
+    const panels = React.Children.toArray(children) as React.ReactElement[];
+
+    return (
+      <div>
+        <div>
+          {panels.map((panel, index) => (
+            <button key={panel.props.header} type="button" onClick={() => onTabChange?.({ index })}>
+              {panel.props.header}
+            </button>
+          ))}
+        </div>
+        {panels[activeIndex]}
+      </div>
+    );
+  },
   TabPanel: ({ header, children }: any) => (
     <section>
       <h3>{header}</h3>
@@ -103,7 +118,14 @@ vi.mock("./features/budgets/BudgetManager", () => ({
 }));
 
 vi.mock("./features/consumptions/ConsumptionManager", () => ({
-  ConsumptionManager: ({ year }: { year: number }) => <div>Consumos {year}</div>
+  ConsumptionManager: ({ year, onReload }: { year: number; onReload: () => Promise<void> }) => (
+    <div>
+      <div>Consumos {year}</div>
+      <button type="button" onClick={() => void onReload()}>
+        Recargar consumos
+      </button>
+    </div>
+  )
 }));
 
 vi.mock("./features/reports/ReportsDashboard", () => ({
@@ -236,4 +258,27 @@ describe("App", () => {
     await waitFor(() => expect(apiMock.logout).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("button", { name: "Entrar" })).toBeInTheDocument());
   }, 10000);
+
+  it("mantiene la pestana de consumos tras recargar datos", async () => {
+    const user = userEvent.setup();
+    const { App } = await import("./App");
+
+    render(<App />);
+
+    await waitFor(() => expect(apiMock.getYears).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Consumos" }));
+
+    expect(screen.getByText(`Consumos ${currentYear}`)).toBeInTheDocument();
+    expect(screen.queryByText(`Presupuestos ${currentYear}`)).not.toBeInTheDocument();
+
+    const consumptionsRequestsBeforeReload = apiMock.getConsumptions.mock.calls.length;
+
+    await user.click(screen.getByRole("button", { name: "Recargar consumos" }));
+
+    await waitFor(() =>
+      expect(apiMock.getConsumptions.mock.calls.length).toBeGreaterThan(consumptionsRequestsBeforeReload)
+    );
+    expect(screen.getByText(`Consumos ${currentYear}`)).toBeInTheDocument();
+    expect(screen.queryByText(`Presupuestos ${currentYear}`)).not.toBeInTheDocument();
+  });
 });

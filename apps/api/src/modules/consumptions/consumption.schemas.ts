@@ -8,5 +8,12 @@ export const consumptionPayloadSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
   month: z.coerce.number().int().min(1).max(12),
   categoryId: z.string().min(1),
-  actualAmount: z.coerce.number().min(0)
+  actualAmount: z.coerce.number().min(0),
+  note: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .optional()
+    .transform((value) => (value && value.length > 0 ? value : null))
 });

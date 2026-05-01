@@ -37,7 +37,7 @@ Que cubren:
 
 - apertura de formularios
 - guardado de partidas y presupuestos
-- registro y borrado de consumos
+- registro, anotacion opcional y borrado de consumos
 - parseo y validacion de ficheros Excel de importacion
 - importacion masiva de partidas, presupuestos y consumos desde la interfaz
 - renderizado del informe resumido

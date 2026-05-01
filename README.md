@@ -24,6 +24,7 @@ La documentacion tecnica ampliada se encuentra en:
 - Configuracion del presupuesto anual previsto por partida.
 - Visualizacion del peso porcentual de cada partida dentro del total de ingresos o gastos del ano.
 - Registro del consumo real por mes y por ano.
+- Anotaciones opcionales por consumo mensual para dejar contexto o recordatorios.
 - Importacion masiva por Excel de partidas, presupuestos previstos y consumos reales.
 - Descarga de plantillas Excel de ejemplo para cada flujo de importacion.
 - Informes comparativos previstos vs reales por ano, con diferencia e indice de ejecucion sobre lo previsto.

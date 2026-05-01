@@ -192,6 +192,7 @@ const januaryConsumption: Consumption = {
   month: 1,
   categoryId: expenseCategory.id,
   actualAmount: 1000,
+  note: "Recibo domiciliado",
   category: expenseCategory
 };
 
@@ -312,6 +313,7 @@ describe("Cobertura Sonar", () => {
     expect(screen.getByText("Enero")).toBeInTheDocument();
     expect(screen.getAllByText("Gasto").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Fija").length).toBeGreaterThan(0);
+    expect(screen.getByText("Recibo domiciliado")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "pi pi-trash" }));
     await waitFor(() => expect(apiMock.deleteConsumption).toHaveBeenCalledWith("consumption-1"));
@@ -319,6 +321,7 @@ describe("Cobertura Sonar", () => {
     await user.click(screen.getByRole("button", { name: "Nuevo consumo" }));
     fireEvent.change(screen.getByLabelText("Mes"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("Importe real"), { target: { value: "150" } });
+    fireEvent.change(screen.getByLabelText("Nota opcional"), { target: { value: "Pago puntual" } });
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() =>
@@ -326,7 +329,8 @@ describe("Cobertura Sonar", () => {
         year: 2026,
         categoryId: "mortgage",
         month: 2,
-        actualAmount: 150
+        actualAmount: 150,
+        note: "Pago puntual"
       })
     );
 
@@ -339,7 +343,8 @@ describe("Cobertura Sonar", () => {
         year: 2026,
         categoryId: "mortgage",
         month: 2,
-        actualAmount: 150
+        actualAmount: 150,
+        note: null
       })
     );
     expect(onReload).toHaveBeenCalled();

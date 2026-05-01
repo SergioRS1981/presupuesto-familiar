@@ -133,6 +133,7 @@ Campos clave:
 - `year`
 - `month`
 - `actualAmount`
+- `note`: anotacion opcional visible en la tabla de consumos
 - `categoryId`
 
 Restriccion importante:

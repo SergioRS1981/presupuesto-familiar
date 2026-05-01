@@ -61,7 +61,7 @@ export const api = {
   deleteBudget: (id: string) => request<void>(`/budgets/${id}`, { method: "DELETE" }),
 
   getConsumptions: (year: number) => request<Consumption[]>(`/consumptions?year=${year}`),
-  saveConsumption: (payload: { year: number; month: number; categoryId: string; actualAmount: number }) =>
+  saveConsumption: (payload: { year: number; month: number; categoryId: string; actualAmount: number; note?: string | null }) =>
     request<Consumption>("/consumptions", { method: "POST", body: payload }),
   deleteConsumption: (id: string) => request<void>(`/consumptions/${id}`, { method: "DELETE" }),
 

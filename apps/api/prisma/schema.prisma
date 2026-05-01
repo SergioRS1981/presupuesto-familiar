@@ -55,6 +55,7 @@ model MonthlyConsumption {
   year         Int
   month        Int
   actualAmount Decimal        @db.Decimal(12, 2)
+  note         String?
   categoryId   String
   category     BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   createdAt    DateTime       @default(now())

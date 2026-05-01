@@ -6,6 +6,7 @@ import { DataTable } from "primereact/datatable";
 import { Dialog } from "primereact/dialog";
 import { Dropdown, DropdownChangeEvent } from "primereact/dropdown";
 import { InputNumber, InputNumberValueChangeEvent } from "primereact/inputnumber";
+import { InputText } from "primereact/inputtext";
 import { api } from "../../api/client";
 import { Category, Consumption } from "../../api/types";
 import { formatCurrency, formatKind, formatNature } from "../../utils/format";
@@ -42,6 +43,8 @@ const renderConsumptionNature = (row: ConsumptionRow) => formatNature(row.catego
 
 const renderConsumptionAmount = (row: ConsumptionRow) => formatCurrency(row.actualAmount);
 
+const renderConsumptionNote = (row: ConsumptionRow) => row.note?.trim() || "Sin nota";
+
 const renderConsumptionActions = (row: ConsumptionRow) => (
   <div className="table-actions">
     <Button text rounded icon="pi pi-pencil" onClick={row.onEdit} />
@@ -57,6 +60,7 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(categories[0]?.id ?? null);
   const [selectedMonth, setSelectedMonth] = useState<number>(1);
   const [actualAmount, setActualAmount] = useState<number>(0);
+  const [note, setNote] = useState("");
 
   const totalActual = useMemo(
     () => consumptions.reduce((accumulator, item) => accumulator + Number(item.actualAmount), 0),
@@ -67,6 +71,7 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
     setSelectedCategoryId(consumption?.categoryId ?? categories[0]?.id ?? null);
     setSelectedMonth(consumption?.month ?? 1);
     setActualAmount(Number(consumption?.actualAmount ?? 0));
+    setNote(consumption?.note ?? "");
     setDialogVisible(true);
   };
 
@@ -83,7 +88,8 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
         year,
         categoryId: selectedCategoryId,
         month: selectedMonth,
-        actualAmount
+        actualAmount,
+        note
       });
 
       setDialogVisible(false);
@@ -126,7 +132,8 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
           year: row.year,
           month: row.month,
           categoryId: category.id,
-          actualAmount: row.actualAmount
+          actualAmount: row.actualAmount,
+          note: null
         });
       }
 
@@ -190,6 +197,7 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
         <Column field="category.kind" header="Tipo" body={renderConsumptionKind} />
         <Column field="category.nature" header="Naturaleza" body={renderConsumptionNature} />
         <Column field="actualAmount" header="Importe real" body={renderConsumptionAmount} />
+        <Column field="note" header="Nota" body={renderConsumptionNote} />
         <Column header="Acciones" body={renderConsumptionActions} />
       </DataTable>
 
@@ -238,6 +246,14 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
               currency="EUR"
               locale="es-ES"
               min={0}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="consumption-note">Nota opcional</label>
+            <InputText
+              id="consumption-note"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
             />
           </div>
         </div>

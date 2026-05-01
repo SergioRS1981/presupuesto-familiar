@@ -34,7 +34,8 @@ export const upsertConsumption = async (payload: ConsumptionPayload) => {
       }
     },
     update: {
-      actualAmount: payload.actualAmount
+      actualAmount: payload.actualAmount,
+      note: payload.note
     },
     create: payload,
     include: {

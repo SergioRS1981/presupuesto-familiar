@@ -34,6 +34,7 @@ export type Consumption = {
   month: number;
   categoryId: string;
   actualAmount: number | string;
+  note?: string | null;
   category: Category;
 };
 

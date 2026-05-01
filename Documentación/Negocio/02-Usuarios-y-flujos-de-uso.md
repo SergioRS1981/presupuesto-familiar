@@ -38,6 +38,7 @@ Cada mes:
 
 1. seleccionar el ano
 2. registrar o importar el consumo real de cada partida que aplique
+3. anadir, si se desea, una anotacion corta para dejar contexto del apunte
 3. actualizar importes si se detectan errores o cambios
 
 ### 3. Revisar informes

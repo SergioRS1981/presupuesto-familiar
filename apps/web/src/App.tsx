@@ -17,6 +17,7 @@ const currentYear = new Date().getFullYear();
 
 export const App = () => {
   const [year, setYear] = useState(currentYear);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [availableYears, setAvailableYears] = useState<ConfiguredYear[]>([{ year: currentYear, active: true }]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -42,6 +43,7 @@ export const App = () => {
     setReport(null);
     setAvailableYears([{ year: currentYear, active: true }]);
     setYear(currentYear);
+    setActiveTabIndex(0);
   };
 
   const dashboardSummary = useMemo(() => {
@@ -442,7 +444,7 @@ export const App = () => {
           <ProgressSpinner />
         </div>
       ) : (
-        <TabView className="content-tabs">
+        <TabView className="content-tabs" activeIndex={activeTabIndex} onTabChange={(event) => setActiveTabIndex(event.index)}>
           <TabPanel header="Partidas y presupuestos">
             <BudgetManager year={year} categories={categories} budgets={budgets} onReload={() => loadData(year)} />
           </TabPanel>
