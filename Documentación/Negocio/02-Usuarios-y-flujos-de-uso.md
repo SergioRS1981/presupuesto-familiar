@@ -38,8 +38,11 @@ Cada mes:
 
 1. seleccionar el ano
 2. registrar o importar el consumo real de cada partida que aplique
-3. anadir, si se desea, una anotacion corta para dejar contexto del apunte
-3. actualizar importes si se detectan errores o cambios
+3. si ya existe un consumo para una partida y mes concretos, modificarlo desde `Editar` en la tabla en vez de crear uno nuevo
+4. anadir, si se desea, una anotacion corta para dejar contexto del apunte
+5. actualizar importes si se detectan errores o cambios
+6. ordenar la tabla por partida, mes, tipo, naturaleza o importe para revisar antes los consumos que interesen
+7. combinar filtros por partida, mes, tipo y naturaleza para acotar rapidamente la vista
 
 ### 3. Revisar informes
 

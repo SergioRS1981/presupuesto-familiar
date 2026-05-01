@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BudgetManager } from "./budgets/BudgetManager";
@@ -129,6 +129,7 @@ vi.mock("primereact/column", () => ({
 
 vi.mock("primereact/datatable", () => ({
   DataTable: ({ value, children, emptyMessage }: any) => {
+    const [sortMeta, setSortMeta] = React.useState<{ field: string; order: 1 | -1 } | null>(null);
     const columns = React.Children.toArray(children) as React.ReactElement[];
 
     if (!value.length) {
@@ -144,17 +145,64 @@ vi.mock("primereact/datatable", () => ({
         return undefined;
       }, row);
 
+    const sortedValue = sortMeta
+      ? [...value].sort((left: Record<string, unknown>, right: Record<string, unknown>) => {
+          const leftValue = getFieldValue(left, sortMeta.field);
+          const rightValue = getFieldValue(right, sortMeta.field);
+
+          if (leftValue === rightValue) {
+            return 0;
+          }
+
+          if (leftValue === undefined || leftValue === null) {
+            return 1 * sortMeta.order;
+          }
+
+          if (rightValue === undefined || rightValue === null) {
+            return -1 * sortMeta.order;
+          }
+
+          if (typeof leftValue === "number" && typeof rightValue === "number") {
+            return (leftValue - rightValue) * sortMeta.order;
+          }
+
+          return String(leftValue).localeCompare(String(rightValue), "es") * sortMeta.order;
+        })
+      : value;
+
     return (
       <table>
         <thead>
           <tr>
             {columns.map((column, index) => (
-              <th key={index}>{column.props.header}</th>
+              <th key={index}>
+                {column.props.sortable && column.props.field ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSortMeta((current) => {
+                        if (current && current.field === column.props.field) {
+                          return {
+                            field: column.props.field,
+                            order: current.order === 1 ? -1 : 1
+                          };
+                        }
+
+                        return { field: column.props.field, order: 1 };
+                      })
+                    }
+                  >
+                    {column.props.header}
+                  </button>
+                ) : (
+                  column.props.header
+                )}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {value.map((row: Record<string, unknown>, rowIndex: number) => (
+          {sortedValue.map((row: Record<string, unknown>, rowIndex: number) => (
             <tr key={String(row.id ?? rowIndex)}>
               {columns.map((column, columnIndex) => (
                 <td key={columnIndex}>
@@ -194,6 +242,44 @@ const januaryConsumption: Consumption = {
   actualAmount: 1000,
   note: "Recibo domiciliado",
   category: expenseCategory
+};
+
+const groceryCategory: Category = {
+  id: "groceries",
+  name: "Supermercado",
+  description: "Compra habitual",
+  kind: "EXPENSE",
+  nature: "VARIABLE",
+  active: true
+};
+
+const februaryConsumption: Consumption = {
+  id: "consumption-2",
+  year: 2026,
+  month: 2,
+  categoryId: groceryCategory.id,
+  actualAmount: 250,
+  note: null,
+  category: groceryCategory
+};
+
+const salaryCategory: Category = {
+  id: "salary",
+  name: "Nomina",
+  description: "Ingreso principal",
+  kind: "INCOME",
+  nature: "FIXED",
+  active: true
+};
+
+const marchConsumption: Consumption = {
+  id: "consumption-3",
+  year: 2026,
+  month: 3,
+  categoryId: salaryCategory.id,
+  actualAmount: 2200,
+  note: "Ingreso mensual",
+  category: salaryCategory
 };
 
 describe("Cobertura Sonar", () => {
@@ -309,14 +395,39 @@ describe("Cobertura Sonar", () => {
       />
     );
 
+    const table = screen.getByRole("table");
+
     expect(screen.getByText("Total registrado")).toBeInTheDocument();
-    expect(screen.getByText("Enero")).toBeInTheDocument();
-    expect(screen.getAllByText("Gasto").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Fija").length).toBeGreaterThan(0);
-    expect(screen.getByText("Recibo domiciliado")).toBeInTheDocument();
+    expect(within(table).getByText("Enero")).toBeInTheDocument();
+    expect(within(table).getByText("Gasto")).toBeInTheDocument();
+    expect(within(table).getByText("Fija")).toBeInTheDocument();
+    expect(within(table).getByText("Recibo domiciliado")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "pi pi-trash" }));
     await waitFor(() => expect(apiMock.deleteConsumption).toHaveBeenCalledWith("consumption-1"));
+
+    await user.click(screen.getByRole("button", { name: "Nuevo consumo" }));
+    fireEvent.change(screen.getByLabelText("Mes"), { target: { value: "1" } });
+    expect(
+      screen.getByText("Ya existe un consumo para esa partida y mes. Debes modificarlo desde la accion Editar de la tabla.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    await user.click(screen.getByRole("button", { name: "pi pi-pencil" }));
+    fireEvent.change(screen.getByLabelText("Importe real"), { target: { value: "180" } });
+    fireEvent.change(screen.getByLabelText("Nota opcional"), { target: { value: "Recibo revisado" } });
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() =>
+      expect(apiMock.saveConsumption).toHaveBeenCalledWith({
+        year: 2026,
+        categoryId: "mortgage",
+        month: 1,
+        actualAmount: 180,
+        note: "Recibo revisado"
+      })
+    );
 
     await user.click(screen.getByRole("button", { name: "Nuevo consumo" }));
     fireEvent.change(screen.getByLabelText("Mes"), { target: { value: "2" } });
@@ -348,6 +459,77 @@ describe("Cobertura Sonar", () => {
       })
     );
     expect(onReload).toHaveBeenCalled();
+  });
+
+  it("permite ordenar la tabla de consumos por columnas salvo nota y acciones", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ConsumptionManager
+        year={2026}
+        categories={[expenseCategory, groceryCategory, salaryCategory]}
+        consumptions={[januaryConsumption, februaryConsumption, marchConsumption]}
+        onReload={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const getFirstRowText = () => screen.getAllByRole("row")[1].textContent ?? "";
+
+    expect(getFirstRowText()).toContain("Hipoteca");
+
+    await user.click(screen.getByRole("button", { name: "Partida" }));
+    expect(getFirstRowText()).toContain("Hipoteca");
+
+    await user.click(screen.getByRole("button", { name: "Partida" }));
+    expect(getFirstRowText()).toContain("Supermercado");
+
+    await user.click(screen.getByRole("button", { name: "Importe real" }));
+    expect(getFirstRowText()).toContain("Supermercado");
+
+    await user.click(screen.getByRole("button", { name: "Importe real" }));
+    expect(getFirstRowText()).toContain("Nomina");
+
+    expect(screen.queryByRole("button", { name: "Nota" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Acciones" })).not.toBeInTheDocument();
+  });
+
+  it("permite combinar filtros de consumos por partida, mes, tipo y naturaleza", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ConsumptionManager
+        year={2026}
+        categories={[expenseCategory, groceryCategory, salaryCategory]}
+        consumptions={[januaryConsumption, februaryConsumption, marchConsumption]}
+        onReload={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const table = screen.getByRole("table");
+
+    expect(within(table).getByText("Hipoteca")).toBeInTheDocument();
+    expect(within(table).getByText("Supermercado")).toBeInTheDocument();
+    expect(within(table).getByText("Nomina")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filtrar por tipo"), { target: { value: "EXPENSE" } });
+    expect(within(table).getByText("Hipoteca")).toBeInTheDocument();
+    expect(within(table).getByText("Supermercado")).toBeInTheDocument();
+    expect(within(table).queryByText("Nomina")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filtrar por naturaleza"), { target: { value: "VARIABLE" } });
+    expect(within(table).getByText("Supermercado")).toBeInTheDocument();
+    expect(within(table).queryByText("Hipoteca")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filtrar por mes"), { target: { value: "2" } });
+    expect(within(table).getByText("Supermercado")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filtrar por partida"), { target: { value: "groceries" } });
+    expect(within(table).getByText("Supermercado")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+    expect(within(table).getByText("Hipoteca")).toBeInTheDocument();
+    expect(within(table).getByText("Supermercado")).toBeInTheDocument();
+    expect(within(table).getByText("Nomina")).toBeInTheDocument();
   });
 
   it("muestra el estado vacio del informe cuando no hay datos", () => {

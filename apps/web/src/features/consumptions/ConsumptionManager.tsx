@@ -35,6 +35,11 @@ type ConsumptionRow = Consumption & {
   onDelete: () => void;
 };
 
+type ConsumptionFormState = {
+  categoryId: string | null;
+  month: number;
+};
+
 const renderConsumptionMonth = (row: ConsumptionRow) => getMonthName(row.month);
 
 const renderConsumptionKind = (row: ConsumptionRow) => formatKind(row.category.kind);
@@ -44,6 +49,28 @@ const renderConsumptionNature = (row: ConsumptionRow) => formatNature(row.catego
 const renderConsumptionAmount = (row: ConsumptionRow) => formatCurrency(row.actualAmount);
 
 const renderConsumptionNote = (row: ConsumptionRow) => row.note?.trim() || "Sin nota";
+
+const findFirstAvailableConsumptionSlot = (
+  categories: Category[],
+  consumptions: Consumption[]
+): ConsumptionFormState | null => {
+  for (const category of categories) {
+    for (const monthOption of monthOptions) {
+      const alreadyExists = consumptions.some(
+        (consumption) => consumption.categoryId === category.id && consumption.month === monthOption.value
+      );
+
+      if (!alreadyExists) {
+        return {
+          categoryId: category.id,
+          month: monthOption.value
+        };
+      }
+    }
+  }
+
+  return null;
+};
 
 const renderConsumptionActions = (row: ConsumptionRow) => (
   <div className="table-actions">
@@ -57,10 +84,33 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [partidaFilter, setPartidaFilter] = useState<string | null>(null);
+  const [monthFilter, setMonthFilter] = useState<number | null>(null);
+  const [kindFilter, setKindFilter] = useState<Category["kind"] | null>(null);
+  const [natureFilter, setNatureFilter] = useState<Category["nature"] | null>(null);
+  const [editingConsumptionId, setEditingConsumptionId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(categories[0]?.id ?? null);
   const [selectedMonth, setSelectedMonth] = useState<number>(1);
   const [actualAmount, setActualAmount] = useState<number>(0);
   const [note, setNote] = useState("");
+
+  const firstAvailableConsumptionSlot = useMemo(
+    () => findFirstAvailableConsumptionSlot(categories, consumptions),
+    [categories, consumptions]
+  );
+
+  const duplicateConsumption = useMemo(
+    () =>
+      consumptions.find(
+        (consumption) =>
+          consumption.categoryId === selectedCategoryId &&
+          consumption.month === selectedMonth &&
+          consumption.id !== editingConsumptionId
+      ) ?? null,
+    [consumptions, editingConsumptionId, selectedCategoryId, selectedMonth]
+  );
+
+  const isNewConsumptionDisabled = categories.length === 0 || firstAvailableConsumptionSlot === null;
 
   const totalActual = useMemo(
     () => consumptions.reduce((accumulator, item) => accumulator + Number(item.actualAmount), 0),
@@ -68,15 +118,33 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
   );
 
   const openDialog = (consumption?: Consumption) => {
-    setSelectedCategoryId(consumption?.categoryId ?? categories[0]?.id ?? null);
-    setSelectedMonth(consumption?.month ?? 1);
+    if (!consumption && !firstAvailableConsumptionSlot) {
+      setFeedback({
+        severity: "error",
+        text: "Ya existe un consumo para cada partida y mes disponibles. Usa Editar para modificar uno ya registrado."
+      });
+      return;
+    }
+
+    setEditingConsumptionId(consumption?.id ?? null);
+    setSelectedCategoryId(consumption?.categoryId ?? firstAvailableConsumptionSlot?.categoryId ?? categories[0]?.id ?? null);
+    setSelectedMonth(consumption?.month ?? firstAvailableConsumptionSlot?.month ?? 1);
     setActualAmount(Number(consumption?.actualAmount ?? 0));
     setNote(consumption?.note ?? "");
+    setFeedback(null);
     setDialogVisible(true);
   };
 
   const saveConsumption = async () => {
     if (!selectedCategoryId) {
+      return;
+    }
+
+    if (duplicateConsumption) {
+      setFeedback({
+        severity: "error",
+        text: "Ya existe un consumo para esa partida y mes. Debes modificarlo desde la accion Editar de la tabla."
+      });
       return;
     }
 
@@ -164,6 +232,32 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
     [consumptions]
   );
 
+  const filteredConsumptionRows = useMemo(
+    () =>
+      consumptionRows.filter((consumption) => {
+        if (partidaFilter && consumption.categoryId !== partidaFilter) {
+          return false;
+        }
+
+        if (monthFilter && consumption.month !== monthFilter) {
+          return false;
+        }
+
+        if (kindFilter && consumption.category.kind !== kindFilter) {
+          return false;
+        }
+
+        if (natureFilter && consumption.category.nature !== natureFilter) {
+          return false;
+        }
+
+        return true;
+      }),
+    [consumptionRows, kindFilter, monthFilter, natureFilter, partidaFilter]
+  );
+
+  const hasActiveFilters = Boolean(partidaFilter || monthFilter || kindFilter || natureFilter);
+
   return (
     <Card
       title={`Consumos reales ${year}`}
@@ -175,7 +269,7 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
           <span className="consumption-highlight__label">Total registrado</span>
           <strong>{formatCurrency(totalActual)}</strong>
         </div>
-        <Button label="Nuevo consumo" icon="pi pi-plus" onClick={() => openDialog()} disabled={categories.length === 0} />
+        <Button label="Nuevo consumo" icon="pi pi-plus" onClick={() => openDialog()} disabled={isNewConsumptionDisabled} />
       </div>
       <ExcelTransferActions
         inputId="consumption-import-file"
@@ -187,32 +281,115 @@ export const ConsumptionManager = ({ year, categories, consumptions, onReload }:
         onImport={handleImport}
       />
       <p className="panel-note">
-        El fichero debe incluir ano, mes, partida e importe real. La partida debe existir previamente.
+        El fichero debe incluir ano, mes, partida e importe real. La partida debe existir previamente. Si un consumo ya
+        existe para una partida y mes concretos, debes actualizarlo desde Editar.
       </p>
       {feedback ? <div className={`inline-feedback inline-feedback--${feedback.severity}`}>{feedback.text}</div> : null}
 
-      <DataTable value={consumptionRows} size="small" paginator rows={10} emptyMessage="No hay consumos registrados.">
-        <Column field="category.name" header="Partida" />
-        <Column field="month" header="Mes" body={renderConsumptionMonth} />
-        <Column field="category.kind" header="Tipo" body={renderConsumptionKind} />
-        <Column field="category.nature" header="Naturaleza" body={renderConsumptionNature} />
-        <Column field="actualAmount" header="Importe real" body={renderConsumptionAmount} />
+      <div className="table-filters">
+        <div className="field">
+          <label htmlFor="consumption-filter-category">Filtrar por partida</label>
+          <Dropdown
+            id="consumption-filter-category"
+            value={partidaFilter}
+            options={categories.map((category) => ({
+              label: category.name,
+              value: category.id
+            }))}
+            onChange={(event: DropdownChangeEvent) => setPartidaFilter(event.value || null)}
+            placeholder="Todas las partidas"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="consumption-filter-month">Filtrar por mes</label>
+          <Dropdown
+            id="consumption-filter-month"
+            value={monthFilter}
+            options={monthOptions}
+            onChange={(event: DropdownChangeEvent) => setMonthFilter(event.value || null)}
+            placeholder="Todos los meses"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="consumption-filter-kind">Filtrar por tipo</label>
+          <Dropdown
+            id="consumption-filter-kind"
+            value={kindFilter}
+            options={[
+              { label: formatKind("INCOME"), value: "INCOME" },
+              { label: formatKind("EXPENSE"), value: "EXPENSE" }
+            ]}
+            onChange={(event: DropdownChangeEvent) => setKindFilter(event.value || null)}
+            placeholder="Todos los tipos"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="consumption-filter-nature">Filtrar por naturaleza</label>
+          <Dropdown
+            id="consumption-filter-nature"
+            value={natureFilter}
+            options={[
+              { label: formatNature("FIXED"), value: "FIXED" },
+              { label: formatNature("VARIABLE"), value: "VARIABLE" }
+            ]}
+            onChange={(event: DropdownChangeEvent) => setNatureFilter(event.value || null)}
+            placeholder="Todas las naturalezas"
+          />
+        </div>
+      </div>
+      {hasActiveFilters ? (
+        <div className="panel-actions panel-actions--start">
+          <Button
+            text
+            label="Limpiar filtros"
+            icon="pi pi-filter-slash"
+            onClick={() => {
+              setPartidaFilter(null);
+              setMonthFilter(null);
+              setKindFilter(null);
+              setNatureFilter(null);
+            }}
+          />
+        </div>
+      ) : null}
+
+      <DataTable
+        value={filteredConsumptionRows}
+        size="small"
+        paginator
+        rows={10}
+        emptyMessage="No hay consumos registrados."
+        className="consumption-table"
+      >
+        <Column field="category.name" header="Partida" sortable />
+        <Column field="month" header="Mes" body={renderConsumptionMonth} sortable />
+        <Column field="category.kind" header="Tipo" body={renderConsumptionKind} sortable />
+        <Column field="category.nature" header="Naturaleza" body={renderConsumptionNature} sortable />
+        <Column field="actualAmount" header="Importe real" body={renderConsumptionAmount} sortable />
         <Column field="note" header="Nota" body={renderConsumptionNote} />
         <Column header="Acciones" body={renderConsumptionActions} />
       </DataTable>
 
       <Dialog
-        header={`Consumo mensual ${year}`}
+        header={`${editingConsumptionId ? "Editar" : "Nuevo"} consumo mensual ${year}`}
         visible={dialogVisible}
         style={{ width: "30rem" }}
-        onHide={() => setDialogVisible(false)}
+        onHide={() => {
+          setDialogVisible(false);
+          setEditingConsumptionId(null);
+        }}
         footer={
           <div className="dialog-actions">
             <Button text label="Cancelar" onClick={() => setDialogVisible(false)} />
-            <Button label="Guardar" loading={saving} onClick={saveConsumption} />
+            <Button label="Guardar" loading={saving} onClick={saveConsumption} disabled={!selectedCategoryId || !!duplicateConsumption} />
           </div>
         }
       >
+        {duplicateConsumption ? (
+          <div className="inline-feedback inline-feedback--error">
+            Ya existe un consumo para esa partida y mes. Debes modificarlo desde la accion Editar de la tabla.
+          </div>
+        ) : null}
         <div className="form-grid">
           <div className="field">
             <label htmlFor="consumption-category">Partida</label>

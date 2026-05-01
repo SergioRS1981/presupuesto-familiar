@@ -21,6 +21,9 @@ Sobre esos datos, la aplicacion genera un informe resumido que compara lo previs
 - Visualizacion del porcentaje que supone cada partida dentro del total de ingresos o gastos del ano.
 - Registro del consumo real mensual por partida y ano.
 - Registro opcional de una anotacion libre en cada consumo mensual.
+- Prevencion de altas manuales duplicadas de consumo para una misma partida y mes, obligando a usar la accion `Editar` si el dato ya existe.
+- Ordenacion interactiva de la tabla de consumos por cualquier columna funcional salvo `Nota` y `Acciones`.
+- Filtrado combinado de la tabla de consumos por partida, mes, tipo y naturaleza.
 - Alta manual de anos historicos para trabajar sobre ejercicios pasados vacios y completarlos despues.
 - Importacion masiva en Excel de:
   - partidas presupuestarias

@@ -25,6 +25,9 @@ La documentacion tecnica ampliada se encuentra en:
 - Visualizacion del peso porcentual de cada partida dentro del total de ingresos o gastos del ano.
 - Registro del consumo real por mes y por ano.
 - Anotaciones opcionales por consumo mensual para dejar contexto o recordatorios.
+- Restriccion de alta manual de consumos duplicados por partida y mes; si ya existe uno, debe modificarse desde `Editar`.
+- Ordenacion de la tabla de consumos por partida, mes, tipo, naturaleza e importe real, excluyendo las columnas `Nota` y `Acciones`.
+- Filtrado combinado de la tabla de consumos por partida, mes, tipo y naturaleza.
 - Importacion masiva por Excel de partidas, presupuestos previstos y consumos reales.
 - Descarga de plantillas Excel de ejemplo para cada flujo de importacion.
 - Informes comparativos previstos vs reales por ano, con diferencia e indice de ejecucion sobre lo previsto.

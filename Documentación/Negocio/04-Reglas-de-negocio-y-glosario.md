@@ -29,6 +29,7 @@
 
 - el consumo se registra por ano, mes y partida
 - para una misma partida solo puede existir un consumo por mes y ano
+- si ese consumo ya existe, no puede volver a darse de alta desde `Nuevo consumo`; debe modificarse desde `Editar`
 - el consumo representa valor real observado
 - el consumo puede incluir una nota opcional para anotar contexto o aclaraciones
 

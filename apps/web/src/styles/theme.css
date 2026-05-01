@@ -288,6 +288,13 @@ body {
   gap: 1rem;
 }
 
+.table-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 .field {
   display: grid;
   gap: 0.45rem;
@@ -383,6 +390,21 @@ body {
 .consumption-highlight__label {
   color: var(--text-soft);
   font-size: 0.86rem;
+}
+
+.consumption-table .p-datatable-thead > tr > th.p-sortable-column.p-highlight,
+.consumption-table .p-datatable-thead > tr > th.p-sortable-column.p-highlight:not(.p-sortable-disabled):hover {
+  background: var(--brand-sky);
+  color: var(--brand-deep);
+}
+
+.consumption-table .p-datatable-thead > tr > th.p-sortable-column.p-highlight .p-sortable-column-icon,
+.consumption-table .p-datatable-thead > tr > th.p-sortable-column.p-highlight:not(.p-sortable-disabled):hover .p-sortable-column-icon {
+  color: var(--brand-deep);
+}
+
+.consumption-table .p-datatable-thead > tr > th.p-sortable-column:focus-visible {
+  box-shadow: inset 0 0 0 0.15rem rgba(22, 61, 55, 0.24);
 }
 
 .reports-layout {
